@@ -269,6 +269,118 @@ def test_lock_exclusion_and_compile_equivalence(tmp_path):
     assert report["exports"][0]["is_volume"]
 
 
+def history_demo(tmp_path):
+    """arch-demo with two span edits: returns (root, [rev0, rev1, rev2])."""
+    root = tmp_path/"demo"
+    revisions = [run("project", "init", root, "--template", "arch-demo")["revision"]]
+    revisions.append(run("project", "set", root, "/params/span", "65")["revision"])
+    revisions.append(run("project", "set", root, "/params/span", "70")["revision"])
+    return root, revisions
+
+
+def span(root):
+    return project.load_state(root)["project"]["params"]["span"]
+
+
+@pytest.mark.parametrize("entry,message", [
+    ("../../project", "id shown by project history"),
+    ("..\\..\\project", "id shown by project history"),
+    ("20260101T000000000000Z-ABCDEF123456", "id shown by project history"),
+    ("", "id shown by project history"),
+    ("20260101T000000000000Z-0123456789ab", "No history entry"),
+])
+def test_restore_rejects_bad_entry_ids_without_touching_the_project(tmp_path, entry, message):
+    root, revisions = history_demo(tmp_path)
+    with pytest.raises(cad.CADError, match=message):
+        run("project", "restore", root, entry)
+    assert run("project", "info", root)["revision"] == revisions[-1]
+    assert len(list((root/".cdcad/history").glob("*.json"))) == 2
+
+
+def test_restore_with_no_history_and_with_stale_revision_or_pending_write(tmp_path):
+    fresh = tmp_path/"fresh"
+    run("project", "init", fresh, "--template", "arch-demo")
+    with pytest.raises(cad.CADError, match="No history to restore"):
+        run("project", "restore", fresh, "last")
+    assert run("project", "history", fresh) == {"ok": True, "revision": run("project", "info", fresh)["revision"],
+                                               "total": 0, "entries": []}
+    root, revisions = history_demo(tmp_path)
+    with pytest.raises(cad.CADError, match="Revision conflict"):
+        run("project", "restore", root, "last", "--if-revision", revisions[0])
+    assert span(root) == 70
+    run("project", "restore", root, "last", "--if-revision", revisions[2])
+    assert span(root) == 65
+    atomic_bytes(root/".cdcad/pending.json", json_bytes({"before": {}, "after": {}}))
+    with pytest.raises(cad.CADError, match="Unfinished"):
+        run("project", "restore", root, "last")
+    with pytest.raises(cad.CADError, match="Unfinished"):
+        run("project", "history", root)
+
+
+def test_restore_rejects_damaged_snapshots(tmp_path):
+    root, revisions = history_demo(tmp_path)
+    newest, older = sorted((root/".cdcad/history").glob("*.json"), reverse=True)
+    newest.write_text('{"action": "set", "after_revision": "x"}')      # no "before"
+    older.write_text("{truncated")
+    listing = run("project", "history", root)
+    assert [e.get("damaged") for e in listing["entries"]] == [True, True]
+    for entry in listing["entries"]:
+        with pytest.raises(cad.CADError, match="damaged"):
+            run("project", "restore", root, entry["id"])
+    with pytest.raises(cad.CADError, match="damaged"):
+        run("project", "restore", root, "last")
+    assert run("project", "info", root)["revision"] == revisions[-1]
+
+
+def test_history_limit_must_be_positive(tmp_path):
+    root, _ = history_demo(tmp_path)
+    with pytest.raises(cad.CADError, match="--limit must be at least 1"):
+        run("project", "history", root, "--limit", 0)
+    assert len(run("project", "history", root, "--limit", 1)["entries"]) == 1
+
+
+def test_history_and_restore_round_trip(tmp_path):
+    root, (rev0, rev1, rev2) = history_demo(tmp_path)
+    listing = run("project", "history", root)
+    assert listing["revision"] == rev2 and listing["total"] == 2
+    newest, older = listing["entries"]
+    assert (newest["action"], newest["before_revision"], newest["after_revision"], newest["current"]) == ("set", rev1, rev2, True)
+    assert (older["before_revision"], older["after_revision"], older["current"]) == (rev0, rev1, False)
+    assert newest["id"] > older["id"] and newest["time"].endswith("Z")
+    # Undo the newest edit; the restore is itself an edit, so it is listed and can be undone.
+    undone = run("project", "restore", root, "last")
+    assert (undone["changed"], undone["revision"], undone["restored_before"]) == (True, rev1, newest["id"])
+    assert span(root) == 65
+    assert [e["action"] for e in run("project", "history", root)["entries"]] == ["restore", "set", "set"]
+    assert run("project", "restore", root, "last")["revision"] == rev2          # restoring again toggles back
+    assert span(root) == 70
+    # An older entry takes the project back to its initial state, byte for byte.
+    initial = run("project", "restore", root, older["id"])
+    assert initial["revision"] == rev0 and span(root) == 60
+    assert run("project", "build", root)["built"] == 5
+    # Nothing to change when the state already matches.
+    assert run("project", "restore", root, older["id"])["changed"] is False
+
+
+def test_restore_returns_a_removed_segment_and_refuses_to_overwrite_a_stray_file(tmp_path):
+    root = tmp_path/"demo"
+    run("project", "init", root)
+    run("project", "put", root, "block", "--spec", '{"op":"box","size":[2,2,2]}')
+    run("project", "set", root, "/solids/part/size/0", "5", "--segment", "block")
+    run("project", "remove", root, "block")
+    assert "block" not in project.load_state(root)["segments"]
+    entries = run("project", "history", root)["entries"]            # newest first: remove, set, put
+    assert [e["action"] for e in entries] == ["remove", "set", "put"]
+    run("project", "restore", root, entries[0]["id"])                # the edited block is back
+    assert project.load_state(root)["segments"]["block"]["solids"]["part"]["size"] == [5, 2, 2]
+    run("project", "remove", root, "block")
+    # The removed segment's file stays on disk with size 5; restoring size 2 would overwrite it.
+    with pytest.raises(cad.CADError, match="move it aside"):
+        run("project", "restore", root, entries[1]["id"])
+    assert "block" not in project.load_state(root)["segments"]
+    assert not (root/".cdcad/pending.json").exists()
+
+
 def test_lock_message_names_the_owning_process(tmp_path):
     root = tmp_path/"demo"
     run("project", "init", root, "--template", "arch-demo")

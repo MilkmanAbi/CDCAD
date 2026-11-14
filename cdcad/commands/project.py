@@ -9,8 +9,8 @@ from .._common import CADError, EXPORT_FORMATS, atomic_bytes, document_path, jso
 from ..project_build import project_build
 from ..project_model import compile_project, inside, project_schema, safe_name, segment_file
 from ..project_store import (
-    METADATA_DIR, apply_patch, init_project, load_state, mutate, pointer_parent,
-    project_lock, recover as recover_project, revision, segment_recipe,
+    METADATA_DIR, apply_patch, history_report, history_snapshot, init_project, load_state, mutate,
+    pointer_parent, project_lock, recover as recover_project, revision, segment_recipe,
 )
 from ..schema import ANCHOR
 
@@ -40,6 +40,9 @@ def add_parser(subparsers):
         sp.add_argument("--out-dir")
         sp.add_argument("--format", choices=EXPORT_FORMATS, default="stl")
         sp.add_argument("--rebuild", action="store_true", help="Rewrite selected outputs while still using geometry cache")
+    history = s.add_parser("history", help="List the saved before-edit snapshots, newest first")
+    history.add_argument("directory")
+    history.add_argument("--limit", type=int, default=20, help="Newest entries to show (default: 20)")
     compile_p = s.add_parser("compile", help="Flatten the project into a standalone recipe")
     compile_p.add_argument("directory")
     compile_p.add_argument("-o", "--output", required=True)
@@ -56,6 +59,7 @@ def add_parser(subparsers):
         "set": "Edit a value by JSON pointer",
         "patch": "Apply and validate a group of source edits",
         "remove": "Remove a segment or assembly from the manifest",
+        "restore": "Return the project to the state saved before a history entry",
     }
     for name, help_text in edits.items():
         sp = s.add_parser(name, help=help_text)
@@ -99,6 +103,8 @@ def add_parser(subparsers):
             sp.add_argument("--file", required=True, help="Patch array against {project: manifest, segments: documents}; - for stdin")
         elif name == "remove":
             sp.add_argument("--cascade", action="store_true", help="Remove dependent assemblies/attachments too")
+        elif name == "restore":
+            sp.add_argument("entry", help="An id from project history, or 'last' to undo the newest edit")
     recovery = s.add_parser("recover", help="Resolve a write interrupted by a crash")
     recovery.add_argument("directory")
     recovery.add_argument("--action", choices=["rollback", "commit"], required=True)
@@ -121,6 +127,9 @@ def execute(args):
         return init_project(root, args.name, args.template, args.units)
     if command == "recover":
         return recover_project(root, args.action)
+    if command == "history":
+        with project_lock(root):
+            return history_report(root, load_state(root), args.limit)
     if command in ("build", "plan"):
         return project_build(
             root, segments=args.segment or (), assemblies=args.assembly or (), layers=args.layer or (),
@@ -143,9 +152,15 @@ def execute(args):
                     "parameters": params, "enabled_outputs": selection,
                     "note": "Schema and dependencies valid; geometry not evaluated"}
 
+    restored = {}
+
     def change(state):
         m, documents = state["project"], state["segments"]
-        if command == "layer":
+        if command == "restore":
+            restored["entry"], snapshot = history_snapshot(root, args.entry)
+            state["project"] = copy.deepcopy(snapshot["project"])
+            state["segments"] = copy.deepcopy(snapshot["segments"])
+        elif command == "layer":
             m["layers"][safe_name(args.name)] = {"enabled": args.enabled == "true"}
         elif command == "put":
             safe_name(args.name)
@@ -240,7 +255,10 @@ def execute(args):
                 m["segments"].pop(current, None)
                 documents.pop(current, None)
                 m["assemblies"].pop(current, None)
-    return mutate(root, command, change, args.if_revision)
+    result = mutate(root, command, change, args.if_revision)
+    if restored:
+        result["restored_before"] = restored["entry"]
+    return result
 
 
 def rebase_assets(recipe, source_dir, destination_dir):

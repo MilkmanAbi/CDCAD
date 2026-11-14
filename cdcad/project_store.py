@@ -75,7 +75,7 @@ def commit(root, before, after, action):
     for relative, value in writes.items():
         path = inside(root, relative)
         if relative not in old and path.exists() and read_json(path) != value:
-            raise CADError(f"Untracked source file exists and differs: {relative}; choose another part name")
+            raise CADError(f"Untracked source file exists and differs: {relative}; move it aside or choose another part name")
     # Keep removed segment source files for recovery/reuse. Removal edits the manifest.
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     history = root/METADATA_DIR/"history"/f"{stamp}-{revision(before)[:12]}.json"
@@ -89,6 +89,59 @@ def commit(root, before, after, action):
     journal_path.unlink()
     return {"ok": True, "changed": True, "revision": revision(after), "written": list(writes),
             "history": str(history.relative_to(root))}
+
+
+HISTORY_ID = re.compile(r"[0-9]{8}T[0-9]{12}Z-[0-9a-f]{12}")
+
+
+def history_ids(root):
+    """Ids of the saved before-edit snapshots, oldest first (ids start with a UTC timestamp)."""
+    folder = Path(root).resolve()/METADATA_DIR/"history"
+    if not folder.is_dir():
+        return []
+    return sorted(p.stem for p in folder.glob("*.json") if HISTORY_ID.fullmatch(p.stem))
+
+
+def history_entry(root, entry_id, current):
+    try:
+        record = read_json(Path(root).resolve()/METADATA_DIR/"history"/f"{entry_id}.json")
+        stamp = datetime.strptime(entry_id.split("-")[0], "%Y%m%dT%H%M%S%fZ")
+        entry = {"id": entry_id, "time": stamp.isoformat(timespec="microseconds")+"Z", "action": record["action"],
+                 "before_revision": revision(record["before"]), "after_revision": record["after_revision"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {"id": entry_id, "damaged": True}
+    return {**entry, "current": entry["after_revision"] == current}
+
+
+def history_report(root, state, limit):
+    if limit < 1:
+        raise CADError("--limit must be at least 1")
+    current, ids = revision(state), history_ids(root)
+    return {"ok": True, "revision": current, "total": len(ids),
+            "entries": [history_entry(root, entry_id, current) for entry_id in reversed(ids[-limit:])]}
+
+
+def history_snapshot(root, entry):
+    """Return (id, state) for the project as it was before an edit; entry is an id or 'last'."""
+    root = Path(root).resolve()
+    if entry == "last":
+        ids = history_ids(root)
+        if not ids:
+            raise CADError("No history to restore")
+        entry = ids[-1]
+    elif not HISTORY_ID.fullmatch(entry):
+        raise CADError("A history entry is an id shown by project history, or 'last'")
+    path = root/METADATA_DIR/"history"/f"{entry}.json"
+    if not path.is_file():
+        raise CADError(f"No history entry: {entry}")
+    try:
+        before = read_json(path)["before"]
+        intact = isinstance(before["project"], dict) and isinstance(before["segments"], dict)
+    except (ValueError, KeyError, TypeError):
+        intact = False
+    if not intact:
+        raise CADError(f"History entry is damaged: {entry}")
+    return entry, before
 
 
 def mutate(root, operation, change, expected=None):
