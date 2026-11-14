@@ -247,7 +247,9 @@ def init_project(root, name, template, units="mm"):
         (root/folder).mkdir(parents=True, exist_ok=True)
     for relative, value in state_files(state).items():
         atomic_bytes(inside(root, relative), json_bytes(value))
-    atomic_bytes(root/".gitignore", b".cdcad/cache/\n.cdcad/project.lock\n.cdcad/pending.json\nbuild/\n")
+    # Build reports and state record absolute paths of this machine, so keep them out of version control.
+    atomic_bytes(root/".gitignore", b".cdcad/cache/\n.cdcad/project.lock\n.cdcad/pending.json\n"
+                                    b".cdcad/build-state.json\n.cdcad/last-build.json\nbuild/\n")
     atomic_bytes(root/"README.md", (f"# {manifest['name']}\n\nEditable CDCAD project. Source units: {units}. Export coordinates use millimeters.\n\n"
         "- project.json: parameters, layers, placements, attachments and assemblies.\n"
         "- segments/<layer>/<name>.json: local parametric geometry for each part.\n"

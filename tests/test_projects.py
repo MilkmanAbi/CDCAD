@@ -381,6 +381,19 @@ def test_restore_returns_a_removed_segment_and_refuses_to_overwrite_a_stray_file
     assert not (root/".cdcad/pending.json").exists()
 
 
+def test_generated_gitignore_covers_metadata_that_records_absolute_paths(tmp_path):
+    root = tmp_path/"demo"
+    run("project", "init", root, "--template", "arch-demo")
+    run("project", "set", root, "/params/span", "70")
+    run("project", "build", root)
+    here = json.dumps(str(root.resolve()))[1:-1]               # the way JSON writes the path
+    leaking = [p.relative_to(root).as_posix() for p in (root/".cdcad").rglob("*.json") if here in p.read_text()]
+    assert {".cdcad/last-build.json", ".cdcad/build-state.json"} <= set(leaking)
+    lines = (root/".gitignore").read_text().split()
+    for relative in leaking:
+        assert relative in lines or any(relative.startswith(line) for line in lines if line.endswith("/")), relative
+
+
 def test_lock_message_names_the_owning_process(tmp_path):
     root = tmp_path/"demo"
     run("project", "init", root, "--template", "arch-demo")
