@@ -4,8 +4,8 @@ import importlib.metadata
 import json
 import os
 from pathlib import Path, PureWindowsPath
+import secrets
 import sys
-import tempfile
 
 VERSION = "0.3.0"
 UNITS = {"mm": 1.0, "cm": 10.0, "m": 1000.0, "in": 25.4}
@@ -57,17 +57,23 @@ def read_json(path):
 
 
 def atomic_bytes(path, data):
+    """Replace path with data in one step; readers see the old or the new file, never a part."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = None
+    # Create the temporary file with the mode a normal write would get (0o666 minus
+    # the umask). tempfile.NamedTemporaryFile makes it 0o600, and that mode would
+    # survive os.replace, leaving every model and project file owner-only on POSIX.
+    tmp = path.parent/f".cdcad-{os.getpid():x}-{secrets.token_hex(6)}"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+    fd = os.open(tmp, flags, 0o666)
     try:
-        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".cdcad-", delete=False) as f:
-            tmp = Path(f.name)
+        with os.fdopen(fd, "wb") as f:
             f.write(data)
+            f.flush()
+            os.fsync(f.fileno())  # the recovery journal is only useful if it reached the disk
         os.replace(tmp, path)
     finally:
-        if tmp and tmp.exists():
-            tmp.unlink()
+        tmp.unlink(missing_ok=True)
 
 
 def json_bytes(value):
