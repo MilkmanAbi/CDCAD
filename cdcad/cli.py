@@ -1,6 +1,7 @@
 """CDCAD command discovery, dispatch, and output."""
 import argparse
 import json
+from pathlib import Path
 import sys
 
 from ._common import CADError, EXPORT_FORMATS, UNITS, VERSION, dependency_versions
@@ -38,7 +39,8 @@ def parser():
 
 def capabilities(args):
     return {
-        "ok": True, "version": VERSION, "recipe_version": 1, "project_version": 1,
+        "ok": True, "version": VERSION, "package": str(Path(__file__).resolve().parent),
+        "recipe_version": 1, "project_version": 1,
         "profiles": list(PROFILE_OPS), "solids": list(SOLID_OPS),
         "commands": list(args.command_choices), "project_commands": list(args.project_choices),
         "units": dict(UNITS), "export_formats": list(EXPORT_FORMATS),

@@ -29,3 +29,5 @@ version = {attr = "cdcad._common.VERSION"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Test the source tree even when an older copy of cdcad is installed in the environment.
+pythonpath = ["."]

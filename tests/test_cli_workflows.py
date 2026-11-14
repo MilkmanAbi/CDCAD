@@ -7,6 +7,7 @@ import sys
 
 import pytest
 
+import cdcad
 from cdcad import CADError, build_recipe, resolve_recipe
 from cdcad.cli import execute, parser
 
@@ -33,6 +34,13 @@ def test_resolve_stdin_and_discovery():
     assert len(result.stdout.splitlines()) > 1
     assert "resolve" in cli("capabilities")["commands"]
     assert "compile" in cli("capabilities")["project_commands"]
+
+
+def test_tests_import_the_source_tree_and_capabilities_names_the_package():
+    # An older cdcad installed in the environment must never be what the tests exercise.
+    source = Path(__file__).resolve().parent.parent/"cdcad"
+    assert Path(cdcad.__file__).resolve().parent == source
+    assert Path(cli("capabilities")["package"]) == source
 
 
 def test_recipe_rejects_typo_and_cannot_overwrite_source(tmp_path):
