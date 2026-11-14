@@ -12,6 +12,7 @@ from ._common import CADError, atomic_bytes, document_path, json_bytes, read_jso
 from .project_model import check_manifest, compile_project, inside, safe_name, segment_file
 
 METADATA_DIR = ".cdcad"
+LEGACY_METADATA_DIR = ".agentcad"  # metadata directory of projects created before the CDCAD rename
 
 
 def digest(value):
@@ -37,12 +38,21 @@ def project_lock(root):
     root = Path(root).resolve()
     if not (root/"project.json").is_file() and not (root/METADATA_DIR/"pending.json").is_file():
         raise CADError(f"No project.json at {root}; initialize a project first")
+    if (root/LEGACY_METADATA_DIR/"pending.json").exists():
+        raise CADError(f"Unfinished write from AgentCAD in {LEGACY_METADATA_DIR}/pending.json; with the project idle, "
+                       f"rename {LEGACY_METADATA_DIR} to {METADATA_DIR} and run project recover")
     lock = root/METADATA_DIR/"project.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
     try:
         fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
     except FileExistsError:
-        raise CADError("Project is locked by another command; after a crashed process remove .cdcad/project.lock manually")
+        try:
+            owner = lock.read_text(encoding="ascii").strip()
+        except (OSError, UnicodeDecodeError):
+            owner = ""
+        holder = f" (process {owner})" if owner.isdigit() else ""
+        raise CADError(f"Project is locked by another command{holder}; after a crashed process "
+                       "remove .cdcad/project.lock manually")
     try:
         with os.fdopen(fd, "w", encoding="ascii") as lock_file:
             lock_file.write(str(os.getpid()))

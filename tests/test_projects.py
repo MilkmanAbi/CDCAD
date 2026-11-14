@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -266,6 +267,33 @@ def test_lock_exclusion_and_compile_equivalence(tmp_path):
     run("project", "compile", root, "-o", compiled)
     report = cad.build_recipe(cad.read_recipe(compiled), tmp_path, out_dir=tmp_path/"standalone", targets=["@arch"])
     assert report["exports"][0]["is_volume"]
+
+
+def test_lock_message_names_the_owning_process(tmp_path):
+    root = tmp_path/"demo"
+    run("project", "init", root, "--template", "arch-demo")
+    with project.project_lock(root):
+        with pytest.raises(cad.CADError, match=rf"locked by another command \(process {os.getpid()}\)"):
+            run("project", "info", root)
+    (root/".cdcad/project.lock").write_text("not a pid")  # a damaged lock still blocks, without a holder
+    with pytest.raises(cad.CADError, match="locked by another command; after"):
+        run("project", "info", root)
+    (root/".cdcad/project.lock").unlink()
+    assert run("project", "info", root)["ok"]
+
+
+def test_unfinished_agentcad_journal_is_not_silently_ignored(tmp_path):
+    root = tmp_path/"demo"
+    run("project", "init", root, "--template", "arch-demo")
+    legacy = root/".agentcad"
+    legacy.mkdir()
+    (legacy/"pending.json").write_text("{}")
+    for command in (("info",), ("set", "/params/span", "70"), ("build",), ("recover", "--action", "rollback")):
+        with pytest.raises(cad.CADError, match="rename .agentcad to .cdcad"):
+            run("project", command[0], root, *command[1:])
+    assert project.load_state(root)["project"]["params"]["span"] == 60
+    (legacy/"pending.json").unlink()
+    assert run("project", "info", root)["ok"]
 
 
 def test_worker_multiple_commands_and_error_isolation(tmp_path):
