@@ -13,6 +13,8 @@ Automating the dull part of making models. In practice that's parts that come ou
 
 You can type all of it by hand. For a one-off that works, but it's a lot of typing, and the commands are really there so that scripts, Makefiles and other programs can do the typing for you.
 
+I built it to kinda just accelerate making STLs for school projects. That's it. I write a function - it makes a STL.
+
 ## What it isn't
 
 It isn't a CAD system and doesn't try to compete with one. If you want parametric CAD in Python, look at CadQuery or build123d. CDCAD has no sketch constraints, no STEP or BREP, no GUI, and no fillets or chamfers on solids. It works on triangle meshes, and a curve is a polygon with as many sides as you ask for.
