@@ -1,0 +1,55 @@
+{
+  "ok": true,
+  "version": "0.1.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "knob",
+      "path": "samples/revolved-knob.stl",
+      "sha256": "6c9dcc7775b01783e783ad8ea9661fd97eabc89809fda7a8e6571c1530e53337",
+      "vertices": 642,
+      "faces": 1280,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 11926.97773411415,
+      "area": 3749.7037243462337,
+      "bounds": [
+        [
+          -18.0,
+          -18.0,
+          0.0
+        ],
+        [
+          18.0,
+          18.0,
+          24.0
+        ]
+      ],
+      "extents": [
+        36.0,
+        36.0,
+        24.0
+      ],
+      "components": 1,
+      "euler_number": 2
+    }
+  ],
+  "trace": [
+    {
+      "kind": "profiles",
+      "name": "section",
+      "op": "polygon",
+      "cache_hit": false,
+      "seconds": 0.004923
+    },
+    {
+      "kind": "solids",
+      "name": "knob",
+      "op": "revolve",
+      "cache_hit": false,
+      "seconds": 0.018963
+    }
+  ],
+  "wall_seconds": 0.092
+}

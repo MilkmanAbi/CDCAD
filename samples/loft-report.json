@@ -1,0 +1,90 @@
+{
+  "ok": true,
+  "version": "0.1.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "adapter",
+      "path": "samples/loft-adapter.stl",
+      "sha256": "e5948562b6417de5f79f97ce3eead092622f6f09c48b1368b2c041f96e37325c",
+      "vertices": 480,
+      "faces": 960,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 15445.603078850545,
+      "area": 4712.92175442765,
+      "bounds": [
+        [
+          -18.0,
+          -18.0,
+          0.0
+        ],
+        [
+          18.0,
+          18.0,
+          30.0
+        ]
+      ],
+      "extents": [
+        36.0,
+        36.0,
+        30.0
+      ],
+      "components": 1,
+      "euler_number": 0
+    }
+  ],
+  "trace": [
+    {
+      "kind": "profiles",
+      "name": "bottom",
+      "op": "circle",
+      "cache_hit": false,
+      "seconds": 0.006027
+    },
+    {
+      "kind": "profiles",
+      "name": "shoulder",
+      "op": "circle",
+      "cache_hit": false,
+      "seconds": 0.005647
+    },
+    {
+      "kind": "profiles",
+      "name": "top",
+      "op": "circle",
+      "cache_hit": false,
+      "seconds": 0.012138
+    },
+    {
+      "kind": "solids",
+      "name": "body",
+      "op": "loft",
+      "cache_hit": false,
+      "seconds": 0.058427
+    },
+    {
+      "kind": "solids",
+      "name": "bore_centered",
+      "op": "cylinder",
+      "cache_hit": false,
+      "seconds": 0.009999
+    },
+    {
+      "kind": "solids",
+      "name": "bore",
+      "op": "transform",
+      "cache_hit": false,
+      "seconds": 0.018315
+    },
+    {
+      "kind": "solids",
+      "name": "adapter",
+      "op": "difference",
+      "cache_hit": false,
+      "seconds": 0.106452
+    }
+  ],
+  "wall_seconds": 0.1744
+}

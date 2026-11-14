@@ -1,0 +1,22 @@
+{
+  "first_build": {
+    "seconds": 0.333906,
+    "built": 5,
+    "unchanged": 0
+  },
+  "unchanged": {
+    "seconds": 0.173226,
+    "built": 0,
+    "unchanged": 5
+  },
+  "span_change": {
+    "seconds": 0.235076,
+    "built": 2,
+    "unchanged": 3
+  },
+  "restored": {
+    "seconds": 0.181244,
+    "built": 2,
+    "unchanged": 3
+  }
+}

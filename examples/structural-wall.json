@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "units": "mm",
+  "solids": {
+    "wall": {
+      "op": "wall", "length": 100, "height": 60, "thickness": 5,
+      "cutouts": [
+        {"shape": "arch", "span": 24, "rise": 12, "leg": 24, "center": [-20, 18]},
+        {"shape": "rectangle", "size": [22, 16], "radius": 2, "center": [25, 36]},
+        {"shape": "slot", "size": [22, 5], "center": [25, 15]}
+      ]
+    }
+  },
+  "exports": [{"solid": "wall", "path": "structural-wall.stl"}]
+}

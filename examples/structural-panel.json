@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "units": "mm",
+  "profiles": {
+    "plate": {"op": "rectangle", "size": [80, 50], "radius": 4},
+    "hole": {"op": "slot", "size": [12, 4], "center": [-28, -15]},
+    "holes": {"op": "grid", "input": "hole", "counts": [4, 4], "step": [18, 10]},
+    "outline": {"op": "difference", "inputs": ["plate", "holes"]}
+  },
+  "solids": {"panel": {"op": "extrude", "profile": "outline", "height": 3}},
+  "exports": [{"solid": "panel", "path": "structural-panel.stl"}]
+}

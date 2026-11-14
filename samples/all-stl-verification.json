@@ -1,0 +1,495 @@
+[
+  {
+    "file": "samples\\dxf-plate.stl",
+    "vertices": 272,
+    "faces": 556,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 8278.657434250228,
+    "area": 5750.737506582413,
+    "bounds": [
+      [
+        -30.0,
+        -20.0,
+        0.0
+      ],
+      [
+        30.0,
+        20.0,
+        7.5
+      ]
+    ],
+    "extents": [
+      60.0,
+      40.0,
+      7.5
+    ],
+    "components": 1,
+    "euler_number": -6
+  },
+  {
+    "file": "samples\\edited-enclosure.stl",
+    "vertices": 1445,
+    "faces": 2906,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 20319.86697643493,
+    "area": 15423.422510141121,
+    "bounds": [
+      [
+        -45.30821228027344,
+        -39.817832946777344,
+        0.0
+      ],
+      [
+        45.30821228027344,
+        39.817832946777344,
+        16.0
+      ]
+    ],
+    "extents": [
+      90.61642456054688,
+      79.63566589355469,
+      16.0
+    ],
+    "components": 1,
+    "euler_number": -8
+  },
+  {
+    "file": "samples\\enclosure.stl",
+    "vertices": 1252,
+    "faces": 2516,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 21733.792239028768,
+    "area": 16476.03726599048,
+    "bounds": [
+      [
+        -40.0,
+        -25.0,
+        0.0
+      ],
+      [
+        40.0,
+        25.0,
+        18.0
+      ]
+    ],
+    "extents": [
+      80.0,
+      50.0,
+      18.0
+    ],
+    "components": 1,
+    "euler_number": -6
+  },
+  {
+    "file": "samples\\loft-adapter.stl",
+    "vertices": 480,
+    "faces": 960,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 15445.603078850545,
+    "area": 4712.92175442765,
+    "bounds": [
+      [
+        -18.0,
+        -18.0,
+        0.0
+      ],
+      [
+        18.0,
+        18.0,
+        30.0
+      ]
+    ],
+    "extents": [
+      36.0,
+      36.0,
+      30.0
+    ],
+    "components": 1,
+    "euler_number": 0
+  },
+  {
+    "file": "samples\\path-frame.stl",
+    "vertices": 180,
+    "faces": 360,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 8333.135046905949,
+    "area": 4845.566627013638,
+    "bounds": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        60.0,
+        40.0,
+        5.0
+      ]
+    ],
+    "extents": [
+      60.0,
+      40.0,
+      5.0
+    ],
+    "components": 1,
+    "euler_number": 0
+  },
+  {
+    "file": "samples\\path-track.stl",
+    "vertices": 172,
+    "faces": 340,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 321.70319285046304,
+    "area": 545.4771180628379,
+    "bounds": [
+      [
+        -1.0,
+        49.0,
+        0.0
+      ],
+      [
+        51.0,
+        56.0,
+        3.0
+      ]
+    ],
+    "extents": [
+      52.0,
+      7.0,
+      3.0
+    ],
+    "components": 1,
+    "euler_number": 2
+  },
+  {
+    "file": "samples\\relief.stl",
+    "vertices": 12288,
+    "faces": 24572,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 9235.754339306715,
+    "area": 5346.094120812711,
+    "bounds": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        60.0,
+        40.0,
+        8.368627548217773
+      ]
+    ],
+    "extents": [
+      60.0,
+      40.0,
+      8.368627548217773
+    ],
+    "components": 1,
+    "euler_number": 2
+  },
+  {
+    "file": "samples\\revolved-knob.stl",
+    "vertices": 642,
+    "faces": 1280,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 11926.977757217224,
+    "area": 3749.703676491521,
+    "bounds": [
+      [
+        -18.0,
+        -18.0,
+        0.0
+      ],
+      [
+        18.0,
+        18.0,
+        24.0
+      ]
+    ],
+    "extents": [
+      36.0,
+      36.0,
+      24.0
+    ],
+    "components": 1,
+    "euler_number": 2
+  },
+  {
+    "file": "samples\\structural-bridge.stl",
+    "vertices": 852,
+    "faces": 1728,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 28652.62667425907,
+    "area": 17326.86725439351,
+    "bounds": [
+      [
+        -35.0,
+        -7.5,
+        0.0
+      ],
+      [
+        35.0,
+        47.5,
+        46.79999923706055
+      ]
+    ],
+    "extents": [
+      70.0,
+      55.0,
+      46.79999923706055
+    ],
+    "components": 1,
+    "euler_number": -12
+  },
+  {
+    "file": "samples\\structural-panel.stl",
+    "vertices": 3272,
+    "faces": 6604,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 9819.799101653427,
+    "area": 8676.978813038693,
+    "bounds": [
+      [
+        -40.0,
+        -25.0,
+        0.0
+      ],
+      [
+        40.0,
+        25.0,
+        3.0
+      ]
+    ],
+    "extents": [
+      80.0,
+      50.0,
+      3.0
+    ],
+    "components": 1,
+    "euler_number": -30
+  },
+  {
+    "file": "samples\\structural-wall.stl",
+    "vertices": 474,
+    "faces": 952,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 23723.645111479476,
+    "area": 12009.267108778988,
+    "bounds": [
+      [
+        -50.0,
+        -2.5,
+        0.0
+      ],
+      [
+        50.0,
+        2.5,
+        60.0
+      ]
+    ],
+    "extents": [
+      100.0,
+      5.0,
+      60.0
+    ],
+    "components": 1,
+    "euler_number": -2
+  },
+  {
+    "file": "samples\\svg-plate.stl",
+    "vertices": 872,
+    "faces": 1744,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 12470.083217941961,
+    "area": 8764.475776198315,
+    "bounds": [
+      [
+        0.0,
+        -50.00002670288086,
+        0.0
+      ],
+      [
+        80.00004577636719,
+        0.0,
+        7.5
+      ]
+    ],
+    "extents": [
+      80.00004577636719,
+      50.00002670288086,
+      7.5
+    ],
+    "components": 1,
+    "euler_number": 0
+  },
+  {
+    "file": "projects\\arch-demo\\build\\assemblies\\demo.stl",
+    "vertices": 877,
+    "faces": 1766,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 35396.85096693537,
+    "area": 17581.20182955887,
+    "bounds": [
+      [
+        -55.0,
+        -21.0,
+        0.0
+      ],
+      [
+        55.0,
+        21.0,
+        62.70000076293945
+      ]
+    ],
+    "extents": [
+      110.0,
+      42.0,
+      62.70000076293945
+    ],
+    "components": 1,
+    "euler_number": -6
+  },
+  {
+    "file": "projects\\arch-demo\\build\\segments\\details\\panel.stl",
+    "vertices": 204,
+    "faces": 408,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 1456.137233828479,
+    "area": 1371.8736402716859,
+    "bounds": [
+      [
+        -14.0,
+        -17.5,
+        4.699999809265137
+      ],
+      [
+        14.0,
+        -14.5,
+        24.700000762939453
+      ]
+    ],
+    "extents": [
+      28.0,
+      3.0,
+      20.000000953674316
+    ],
+    "components": 1,
+    "euler_number": 0
+  },
+  {
+    "file": "projects\\arch-demo\\build\\segments\\foundation\\base.stl",
+    "vertices": 392,
+    "faces": 788,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 22948.055440379103,
+    "area": 10837.427586449561,
+    "bounds": [
+      [
+        -55.0,
+        -21.0,
+        0.0
+      ],
+      [
+        55.0,
+        21.0,
+        5.0
+      ]
+    ],
+    "extents": [
+      110.0,
+      42.0,
+      5.0
+    ],
+    "components": 1,
+    "euler_number": -2
+  },
+  {
+    "file": "projects\\arch-demo\\build\\segments\\structure\\arch.stl",
+    "vertices": 268,
+    "faces": 532,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 10629.426593856211,
+    "area": 5459.4626939129685,
+    "bounds": [
+      [
+        -36.0,
+        -6.0,
+        4.699999809265137
+      ],
+      [
+        36.0,
+        6.0,
+        62.70000076293945
+      ]
+    ],
+    "extents": [
+      72.0,
+      12.0,
+      58.000000953674316
+    ],
+    "components": 1,
+    "euler_number": 2
+  },
+  {
+    "file": "projects\\arch-demo\\build\\segments\\structure\\brace.stl",
+    "vertices": 8,
+    "faces": 12,
+    "watertight": true,
+    "winding_consistent": true,
+    "is_volume": true,
+    "volume": 462.0651033400548,
+    "area": 494.0650327794806,
+    "bounds": [
+      [
+        -45.70092010498047,
+        -2.216184139251709,
+        6.310764789581299
+      ],
+      [
+        -33.29907989501953,
+        18.216184616088867,
+        32.68923568725586
+      ]
+    ],
+    "extents": [
+      12.401840209960938,
+      20.432368755340576,
+      26.37847089767456
+    ],
+    "components": 1,
+    "euler_number": 2
+  }
+]

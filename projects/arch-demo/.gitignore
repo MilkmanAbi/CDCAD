@@ -1,0 +1,4 @@
+.cdcad/cache/
+.cdcad/project.lock
+.cdcad/pending.json
+build/

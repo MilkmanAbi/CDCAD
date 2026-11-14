@@ -1,0 +1,82 @@
+{
+  "ok": true,
+  "version": "0.2.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "bridge",
+      "path": "samples/structural-bridge.stl",
+      "sha256": "559eaca559158fd3be23bef64fddfcc9a5200421ab41b8df6727f7ebc68dd6ff",
+      "vertices": 852,
+      "faces": 1728,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 28652.62667425907,
+      "area": 17326.86725439351,
+      "bounds": [
+        [
+          -35.0,
+          -7.5,
+          0.0
+        ],
+        [
+          35.0,
+          47.5,
+          46.79999923706055
+        ]
+      ],
+      "extents": [
+        70.0,
+        55.0,
+        46.79999923706055
+      ],
+      "components": 1,
+      "euler_number": -12
+    }
+  ],
+  "trace": [
+    {
+      "kind": "solids",
+      "name": "deck",
+      "op": "panel",
+      "cache_hit": false,
+      "seconds": 0.003408
+    },
+    {
+      "kind": "solids",
+      "name": "arch",
+      "op": "arch",
+      "cache_hit": false,
+      "seconds": 0.005272
+    },
+    {
+      "kind": "solids",
+      "name": "ribs",
+      "op": "repeat",
+      "cache_hit": false,
+      "seconds": 0.028542
+    },
+    {
+      "kind": "solids",
+      "name": "left_rail",
+      "op": "beam",
+      "cache_hit": false,
+      "seconds": 0.002202
+    },
+    {
+      "kind": "solids",
+      "name": "right_rail",
+      "op": "beam",
+      "cache_hit": false,
+      "seconds": 0.001479
+    },
+    {
+      "kind": "solids",
+      "name": "bridge",
+      "op": "union",
+      "cache_hit": false,
+      "seconds": 0.061698
+    }
+  ]
+}

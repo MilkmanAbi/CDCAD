@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "units": "mm",
+  "params": {"width": 80, "depth": 50, "floor": 3, "wall": 2.5, "height": 18, "hole_r": 2},
+  "profiles": {
+    "footprint": {"op": "rectangle", "size": ["=width", "=depth"], "radius": 5},
+    "inside": {"op": "offset", "input": "footprint", "distance": "=-wall"},
+    "rim": {"op": "difference", "inputs": ["footprint", "inside"]},
+    "hole": {"op": "circle", "radius": "=hole_r", "segments": 64},
+    "h1": {"op": "transform", "input": "hole", "translate": [-30, -15]},
+    "h2": {"op": "transform", "input": "hole", "translate": [30, -15]},
+    "h3": {"op": "transform", "input": "hole", "translate": [30, 15]},
+    "h4": {"op": "transform", "input": "hole", "translate": [-30, 15]},
+    "floor_outline": {"op": "difference", "inputs": ["footprint", "h1", "h2", "h3", "h4"]},
+    "boss_outer": {"op": "circle", "radius": 7},
+    "boss_inner": {"op": "circle", "radius": 3},
+    "boss_ring": {"op": "difference", "inputs": ["boss_outer", "boss_inner"]}
+  },
+  "solids": {
+    "floor": {"op": "extrude", "profile": "floor_outline", "height": "=floor"},
+    "walls": {"op": "extrude", "profile": "rim", "height": "=height-floor+0.5", "z": "=floor-0.5"},
+    "boss": {"op": "extrude", "profile": "boss_ring", "height": 7, "z": "=floor-0.5"},
+    "enclosure": {"op": "union", "inputs": ["floor", "walls", "boss"]}
+  },
+  "exports": [{"solid": "enclosure", "path": "enclosure.stl"}]
+}

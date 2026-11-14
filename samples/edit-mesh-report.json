@@ -1,0 +1,83 @@
+{
+  "ok": true,
+  "version": "0.1.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "finished",
+      "path": "samples/edited-enclosure.stl",
+      "sha256": "dfafc900c3c79f7c329f18cef4dc7a2d140c482f3d29f4cc1fb005d0592bdd9d",
+      "vertices": 1445,
+      "faces": 2906,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 20319.866273128708,
+      "area": 15423.42230435422,
+      "bounds": [
+        [
+          -45.30821235005877,
+          -39.81783129329219,
+          0.0
+        ],
+        [
+          45.30821235005877,
+          39.81783129329219,
+          16.0
+        ]
+      ],
+      "extents": [
+        90.61642470011753,
+        79.63566258658437,
+        16.0
+      ],
+      "components": 1,
+      "euler_number": -8
+    }
+  ],
+  "trace": [
+    {
+      "kind": "solids",
+      "name": "original",
+      "op": "import",
+      "cache_hit": false,
+      "seconds": 0.049318
+    },
+    {
+      "kind": "solids",
+      "name": "tool_at_origin",
+      "op": "cylinder",
+      "cache_hit": false,
+      "seconds": 0.00967
+    },
+    {
+      "kind": "solids",
+      "name": "tool",
+      "op": "transform",
+      "cache_hit": false,
+      "seconds": 0.017323
+    },
+    {
+      "kind": "solids",
+      "name": "with_port",
+      "op": "difference",
+      "cache_hit": false,
+      "seconds": 0.121755
+    },
+    {
+      "kind": "solids",
+      "name": "trimmed",
+      "op": "cut",
+      "cache_hit": false,
+      "seconds": 0.166555
+    },
+    {
+      "kind": "solids",
+      "name": "finished",
+      "op": "transform",
+      "cache_hit": false,
+      "seconds": 0.201874
+    }
+  ],
+  "wall_seconds": 0.2951
+}

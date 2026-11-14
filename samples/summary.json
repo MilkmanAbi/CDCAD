@@ -1,0 +1,683 @@
+[
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "enclosure",
+        "path": "samples/enclosure.stl",
+        "sha256": "0627bfb8425356373404b2584be42603526a36f37de9be5da1297d1f87ab9e35",
+        "vertices": 1252,
+        "faces": 2516,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 21733.792239028768,
+        "area": 16476.03726599048,
+        "bounds": [
+          [
+            -40.0,
+            -25.0,
+            0.0
+          ],
+          [
+            40.0,
+            25.0,
+            18.0
+          ]
+        ],
+        "extents": [
+          80.0,
+          50.0,
+          18.0
+        ],
+        "components": 1,
+        "euler_number": -6
+      }
+    ],
+    "trace": [
+      {
+        "kind": "profiles",
+        "name": "footprint",
+        "op": "rectangle",
+        "cache_hit": false,
+        "seconds": 0.006344
+      },
+      {
+        "kind": "profiles",
+        "name": "hole",
+        "op": "circle",
+        "cache_hit": false,
+        "seconds": 0.007216
+      },
+      {
+        "kind": "profiles",
+        "name": "h1",
+        "op": "transform",
+        "cache_hit": false,
+        "seconds": 0.013289
+      },
+      {
+        "kind": "profiles",
+        "name": "h2",
+        "op": "transform",
+        "cache_hit": false,
+        "seconds": 0.006433
+      },
+      {
+        "kind": "profiles",
+        "name": "h3",
+        "op": "transform",
+        "cache_hit": false,
+        "seconds": 0.006778
+      },
+      {
+        "kind": "profiles",
+        "name": "h4",
+        "op": "transform",
+        "cache_hit": false,
+        "seconds": 0.005368
+      },
+      {
+        "kind": "profiles",
+        "name": "floor_outline",
+        "op": "difference",
+        "cache_hit": false,
+        "seconds": 0.045719
+      },
+      {
+        "kind": "solids",
+        "name": "floor",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.066975
+      },
+      {
+        "kind": "profiles",
+        "name": "inside",
+        "op": "offset",
+        "cache_hit": false,
+        "seconds": 0.006047
+      },
+      {
+        "kind": "profiles",
+        "name": "rim",
+        "op": "difference",
+        "cache_hit": false,
+        "seconds": 0.012384
+      },
+      {
+        "kind": "solids",
+        "name": "walls",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.028097
+      },
+      {
+        "kind": "profiles",
+        "name": "boss_outer",
+        "op": "circle",
+        "cache_hit": false,
+        "seconds": 0.006699
+      },
+      {
+        "kind": "profiles",
+        "name": "boss_inner",
+        "op": "circle",
+        "cache_hit": false,
+        "seconds": 0.011662
+      },
+      {
+        "kind": "profiles",
+        "name": "boss_ring",
+        "op": "difference",
+        "cache_hit": false,
+        "seconds": 0.02465
+      },
+      {
+        "kind": "solids",
+        "name": "boss",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.037633
+      },
+      {
+        "kind": "solids",
+        "name": "enclosure",
+        "op": "union",
+        "cache_hit": false,
+        "seconds": 0.21833
+      }
+    ],
+    "wall_seconds": 0.318
+  },
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "embossed_plate",
+        "path": "samples/svg-plate.stl",
+        "sha256": "80468eb98bfa031b636510aadc789b70fb1754ac79899f7a91861a11005381e9",
+        "vertices": 872,
+        "faces": 1744,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 12470.083217941961,
+        "area": 8764.475776198315,
+        "bounds": [
+          [
+            0.0,
+            -50.00002670288086,
+            0.0
+          ],
+          [
+            80.00004577636719,
+            0.0,
+            7.5
+          ]
+        ],
+        "extents": [
+          80.00004577636719,
+          50.00002670288086,
+          7.5
+        ],
+        "components": 1,
+        "euler_number": 0
+      }
+    ],
+    "trace": [
+      {
+        "kind": "profiles",
+        "name": "plate",
+        "op": "svg",
+        "cache_hit": false,
+        "seconds": 0.07059
+      },
+      {
+        "kind": "solids",
+        "name": "base",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.081474
+      },
+      {
+        "kind": "profiles",
+        "name": "badge",
+        "op": "svg",
+        "cache_hit": false,
+        "seconds": 0.062743
+      },
+      {
+        "kind": "solids",
+        "name": "raised",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.081209
+      },
+      {
+        "kind": "solids",
+        "name": "embossed_plate",
+        "op": "union",
+        "cache_hit": false,
+        "seconds": 0.233612
+      }
+    ],
+    "wall_seconds": 0.315
+  },
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "part",
+        "path": "samples/dxf-plate.stl",
+        "sha256": "5cd52a40a979a110faad29fd460e417f33b42d81964c86a0dc92c13c5fa5eee6",
+        "vertices": 272,
+        "faces": 556,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 8278.657434250228,
+        "area": 5750.737506582413,
+        "bounds": [
+          [
+            -30.0,
+            -20.0,
+            0.0
+          ],
+          [
+            30.0,
+            20.0,
+            7.5
+          ]
+        ],
+        "extents": [
+          60.0,
+          40.0,
+          7.5
+        ],
+        "components": 1,
+        "euler_number": -6
+      }
+    ],
+    "trace": [
+      {
+        "kind": "profiles",
+        "name": "base",
+        "op": "dxf",
+        "cache_hit": false,
+        "seconds": 0.034805
+      },
+      {
+        "kind": "solids",
+        "name": "base",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.045443
+      },
+      {
+        "kind": "profiles",
+        "name": "raised",
+        "op": "dxf",
+        "cache_hit": false,
+        "seconds": 0.027026
+      },
+      {
+        "kind": "solids",
+        "name": "raised",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.036309
+      },
+      {
+        "kind": "solids",
+        "name": "part",
+        "op": "union",
+        "cache_hit": false,
+        "seconds": 0.123805
+      }
+    ],
+    "wall_seconds": 0.1892
+  },
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "frame",
+        "path": "samples/path-frame.stl",
+        "sha256": "4a8056ac163ad437cdf6c5a3cc01f0da975b6715c6f00ebc567df4b0543334d1",
+        "vertices": 180,
+        "faces": 360,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 8333.13503866746,
+        "area": 4845.566624231669,
+        "bounds": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            60.0,
+            40.0,
+            5.0
+          ]
+        ],
+        "extents": [
+          60.0,
+          40.0,
+          5.0
+        ],
+        "components": 1,
+        "euler_number": 0
+      },
+      {
+        "solid": "raised_path",
+        "path": "samples/path-track.stl",
+        "sha256": "f6eac70cf145017bcba7cf8801bd014a090079f550b05e19239fe23c5dae8b72",
+        "vertices": 172,
+        "faces": 340,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 321.70318233650147,
+        "area": 545.4771160242108,
+        "bounds": [
+          [
+            -1.0,
+            49.0,
+            0.0
+          ],
+          [
+            51.0,
+            56.0,
+            3.0
+          ]
+        ],
+        "extents": [
+          52.0,
+          7.0,
+          3.0
+        ],
+        "components": 1,
+        "euler_number": 2
+      }
+    ],
+    "trace": [
+      {
+        "kind": "profiles",
+        "name": "outline",
+        "op": "path",
+        "cache_hit": false,
+        "seconds": 0.039891
+      },
+      {
+        "kind": "solids",
+        "name": "frame",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.05218
+      },
+      {
+        "kind": "profiles",
+        "name": "track",
+        "op": "stroke",
+        "cache_hit": false,
+        "seconds": 0.005645
+      },
+      {
+        "kind": "solids",
+        "name": "raised_path",
+        "op": "extrude",
+        "cache_hit": false,
+        "seconds": 0.0159
+      }
+    ],
+    "wall_seconds": 0.1504
+  },
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "adapter",
+        "path": "samples/loft-adapter.stl",
+        "sha256": "e5948562b6417de5f79f97ce3eead092622f6f09c48b1368b2c041f96e37325c",
+        "vertices": 480,
+        "faces": 960,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 15445.603078850545,
+        "area": 4712.92175442765,
+        "bounds": [
+          [
+            -18.0,
+            -18.0,
+            0.0
+          ],
+          [
+            18.0,
+            18.0,
+            30.0
+          ]
+        ],
+        "extents": [
+          36.0,
+          36.0,
+          30.0
+        ],
+        "components": 1,
+        "euler_number": 0
+      }
+    ],
+    "trace": [
+      {
+        "kind": "profiles",
+        "name": "bottom",
+        "op": "circle",
+        "cache_hit": false,
+        "seconds": 0.006027
+      },
+      {
+        "kind": "profiles",
+        "name": "shoulder",
+        "op": "circle",
+        "cache_hit": false,
+        "seconds": 0.005647
+      },
+      {
+        "kind": "profiles",
+        "name": "top",
+        "op": "circle",
+        "cache_hit": false,
+        "seconds": 0.012138
+      },
+      {
+        "kind": "solids",
+        "name": "body",
+        "op": "loft",
+        "cache_hit": false,
+        "seconds": 0.058427
+      },
+      {
+        "kind": "solids",
+        "name": "bore_centered",
+        "op": "cylinder",
+        "cache_hit": false,
+        "seconds": 0.009999
+      },
+      {
+        "kind": "solids",
+        "name": "bore",
+        "op": "transform",
+        "cache_hit": false,
+        "seconds": 0.018315
+      },
+      {
+        "kind": "solids",
+        "name": "adapter",
+        "op": "difference",
+        "cache_hit": false,
+        "seconds": 0.106452
+      }
+    ],
+    "wall_seconds": 0.1744
+  },
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "knob",
+        "path": "samples/revolved-knob.stl",
+        "sha256": "6c9dcc7775b01783e783ad8ea9661fd97eabc89809fda7a8e6571c1530e53337",
+        "vertices": 642,
+        "faces": 1280,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 11926.97773411415,
+        "area": 3749.7037243462337,
+        "bounds": [
+          [
+            -18.0,
+            -18.0,
+            0.0
+          ],
+          [
+            18.0,
+            18.0,
+            24.0
+          ]
+        ],
+        "extents": [
+          36.0,
+          36.0,
+          24.0
+        ],
+        "components": 1,
+        "euler_number": 2
+      }
+    ],
+    "trace": [
+      {
+        "kind": "profiles",
+        "name": "section",
+        "op": "polygon",
+        "cache_hit": false,
+        "seconds": 0.004923
+      },
+      {
+        "kind": "solids",
+        "name": "knob",
+        "op": "revolve",
+        "cache_hit": false,
+        "seconds": 0.018963
+      }
+    ],
+    "wall_seconds": 0.092
+  },
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "relief",
+        "path": "samples/relief.stl",
+        "sha256": "3634326009ff9634d14527a6e3b3f97d11369e8918d07d9ae96e67dcd7d01c44",
+        "vertices": 12288,
+        "faces": 24572,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 9235.75448424984,
+        "area": 5346.094121750311,
+        "bounds": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            60.0,
+            40.0,
+            8.36862745098039
+          ]
+        ],
+        "extents": [
+          60.0,
+          40.0,
+          8.36862745098039
+        ],
+        "components": 1,
+        "euler_number": 2
+      }
+    ],
+    "trace": [
+      {
+        "kind": "solids",
+        "name": "relief",
+        "op": "heightfield",
+        "cache_hit": false,
+        "seconds": 0.219225
+      }
+    ],
+    "wall_seconds": 0.5699
+  },
+  {
+    "ok": true,
+    "version": "0.1.0",
+    "units": "mm",
+    "exports": [
+      {
+        "solid": "finished",
+        "path": "samples/edited-enclosure.stl",
+        "sha256": "dfafc900c3c79f7c329f18cef4dc7a2d140c482f3d29f4cc1fb005d0592bdd9d",
+        "vertices": 1445,
+        "faces": 2906,
+        "watertight": true,
+        "winding_consistent": true,
+        "is_volume": true,
+        "volume": 20319.866273128708,
+        "area": 15423.42230435422,
+        "bounds": [
+          [
+            -45.30821235005877,
+            -39.81783129329219,
+            0.0
+          ],
+          [
+            45.30821235005877,
+            39.81783129329219,
+            16.0
+          ]
+        ],
+        "extents": [
+          90.61642470011753,
+          79.63566258658437,
+          16.0
+        ],
+        "components": 1,
+        "euler_number": -8
+      }
+    ],
+    "trace": [
+      {
+        "kind": "solids",
+        "name": "original",
+        "op": "import",
+        "cache_hit": false,
+        "seconds": 0.049318
+      },
+      {
+        "kind": "solids",
+        "name": "tool_at_origin",
+        "op": "cylinder",
+        "cache_hit": false,
+        "seconds": 0.00967
+      },
+      {
+        "kind": "solids",
+        "name": "tool",
+        "op": "transform",
+        "cache_hit": false,
+        "seconds": 0.017323
+      },
+      {
+        "kind": "solids",
+        "name": "with_port",
+        "op": "difference",
+        "cache_hit": false,
+        "seconds": 0.121755
+      },
+      {
+        "kind": "solids",
+        "name": "trimmed",
+        "op": "cut",
+        "cache_hit": false,
+        "seconds": 0.166555
+      },
+      {
+        "kind": "solids",
+        "name": "finished",
+        "op": "transform",
+        "cache_hit": false,
+        "seconds": 0.201874
+      }
+    ],
+    "wall_seconds": 0.2951
+  }
+]

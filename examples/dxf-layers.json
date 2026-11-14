@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "units": "mm",
+  "profiles": {
+    "base": {"op": "dxf", "path": "drawing.dxf", "layers": ["OUTLINE"], "tolerance": 0.03},
+    "raised": {"op": "dxf", "path": "drawing.dxf", "layers": ["RAISED"]}
+  },
+  "solids": {
+    "base": {"op": "extrude", "profile": "base", "height": 3},
+    "raised": {"op": "extrude", "profile": "raised", "height": 5, "z": 2.5},
+    "part": {"op": "union", "inputs": ["base", "raised"]}
+  },
+  "exports": [{"solid": "part", "path": "dxf-plate.stl"}]
+}

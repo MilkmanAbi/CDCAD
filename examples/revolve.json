@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "units": "mm",
+  "profiles": {"section": {"op": "polygon", "points": [[0, 0], [18, 0], [18, 3], [12, 3], [12, 18], [9, 24], [0, 24]]}},
+  "solids": {"knob": {"op": "revolve", "profile": "section", "segments": 128}},
+  "exports": [{"solid": "knob", "path": "revolved-knob.stl"}]
+}

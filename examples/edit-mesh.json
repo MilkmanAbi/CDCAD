@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "units": "mm",
+  "solids": {
+    "original": {"op": "import", "path": "../samples/enclosure.stl", "units": "mm", "repair": true},
+    "tool_at_origin": {"op": "cylinder", "radius": 5, "height": 10},
+    "tool": {"op": "transform", "input": "tool_at_origin", "rotate": [90, 0, 0], "translate": [0, -24, 10]},
+    "with_port": {"op": "difference", "inputs": ["original", "tool"]},
+    "trimmed": {"op": "cut", "input": "with_port", "origin": [0, 0, 16], "normal": [0, 0, -1]},
+    "finished": {"op": "transform", "input": "trimmed", "rotate": [0, 0, 30]}
+  },
+  "exports": [{"solid": "finished", "path": "edited-enclosure.stl"}]
+}

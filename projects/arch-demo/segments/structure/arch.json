@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "profiles": {},
+  "solids": {
+    "part": {
+      "op": "arch",
+      "span": "=span",
+      "rise": "=rise",
+      "leg": "=leg",
+      "thickness": "=rib",
+      "depth": "=depth"
+    }
+  },
+  "exports": [
+    {
+      "solid": "part",
+      "path": "part.stl"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "version": "0.1.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "part",
+      "path": "samples/dxf-plate.stl",
+      "sha256": "5cd52a40a979a110faad29fd460e417f33b42d81964c86a0dc92c13c5fa5eee6",
+      "vertices": 272,
+      "faces": 556,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 8278.657434250228,
+      "area": 5750.737506582413,
+      "bounds": [
+        [
+          -30.0,
+          -20.0,
+          0.0
+        ],
+        [
+          30.0,
+          20.0,
+          7.5
+        ]
+      ],
+      "extents": [
+        60.0,
+        40.0,
+        7.5
+      ],
+      "components": 1,
+      "euler_number": -6
+    }
+  ],
+  "trace": [
+    {
+      "kind": "profiles",
+      "name": "base",
+      "op": "dxf",
+      "cache_hit": false,
+      "seconds": 0.034805
+    },
+    {
+      "kind": "solids",
+      "name": "base",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.045443
+    },
+    {
+      "kind": "profiles",
+      "name": "raised",
+      "op": "dxf",
+      "cache_hit": false,
+      "seconds": 0.027026
+    },
+    {
+      "kind": "solids",
+      "name": "raised",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.036309
+    },
+    {
+      "kind": "solids",
+      "name": "part",
+      "op": "union",
+      "cache_hit": false,
+      "seconds": 0.123805
+    }
+  ],
+  "wall_seconds": 0.1892
+}

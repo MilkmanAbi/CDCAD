@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "profiles": {},
+  "solids": {
+    "part": {
+      "op": "panel",
+      "size": [
+        110,
+        42
+      ],
+      "thickness": 5,
+      "center": [
+        0,
+        0,
+        2.5
+      ],
+      "cutouts": [
+        {
+          "shape": "circle",
+          "radius": 2.2,
+          "center": [
+            -45,
+            12
+          ]
+        },
+        {
+          "shape": "circle",
+          "radius": 2.2,
+          "center": [
+            45,
+            12
+          ]
+        }
+      ]
+    }
+  },
+  "exports": [
+    {
+      "solid": "part",
+      "path": "part.stl"
+    }
+  ]
+}

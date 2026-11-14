@@ -1,0 +1,153 @@
+{
+  "ok": true,
+  "version": "0.1.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "enclosure",
+      "path": "samples/enclosure.stl",
+      "sha256": "0627bfb8425356373404b2584be42603526a36f37de9be5da1297d1f87ab9e35",
+      "vertices": 1252,
+      "faces": 2516,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 21733.792239028768,
+      "area": 16476.03726599048,
+      "bounds": [
+        [
+          -40.0,
+          -25.0,
+          0.0
+        ],
+        [
+          40.0,
+          25.0,
+          18.0
+        ]
+      ],
+      "extents": [
+        80.0,
+        50.0,
+        18.0
+      ],
+      "components": 1,
+      "euler_number": -6
+    }
+  ],
+  "trace": [
+    {
+      "kind": "profiles",
+      "name": "footprint",
+      "op": "rectangle",
+      "cache_hit": false,
+      "seconds": 0.006344
+    },
+    {
+      "kind": "profiles",
+      "name": "hole",
+      "op": "circle",
+      "cache_hit": false,
+      "seconds": 0.007216
+    },
+    {
+      "kind": "profiles",
+      "name": "h1",
+      "op": "transform",
+      "cache_hit": false,
+      "seconds": 0.013289
+    },
+    {
+      "kind": "profiles",
+      "name": "h2",
+      "op": "transform",
+      "cache_hit": false,
+      "seconds": 0.006433
+    },
+    {
+      "kind": "profiles",
+      "name": "h3",
+      "op": "transform",
+      "cache_hit": false,
+      "seconds": 0.006778
+    },
+    {
+      "kind": "profiles",
+      "name": "h4",
+      "op": "transform",
+      "cache_hit": false,
+      "seconds": 0.005368
+    },
+    {
+      "kind": "profiles",
+      "name": "floor_outline",
+      "op": "difference",
+      "cache_hit": false,
+      "seconds": 0.045719
+    },
+    {
+      "kind": "solids",
+      "name": "floor",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.066975
+    },
+    {
+      "kind": "profiles",
+      "name": "inside",
+      "op": "offset",
+      "cache_hit": false,
+      "seconds": 0.006047
+    },
+    {
+      "kind": "profiles",
+      "name": "rim",
+      "op": "difference",
+      "cache_hit": false,
+      "seconds": 0.012384
+    },
+    {
+      "kind": "solids",
+      "name": "walls",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.028097
+    },
+    {
+      "kind": "profiles",
+      "name": "boss_outer",
+      "op": "circle",
+      "cache_hit": false,
+      "seconds": 0.006699
+    },
+    {
+      "kind": "profiles",
+      "name": "boss_inner",
+      "op": "circle",
+      "cache_hit": false,
+      "seconds": 0.011662
+    },
+    {
+      "kind": "profiles",
+      "name": "boss_ring",
+      "op": "difference",
+      "cache_hit": false,
+      "seconds": 0.02465
+    },
+    {
+      "kind": "solids",
+      "name": "boss",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.037633
+    },
+    {
+      "kind": "solids",
+      "name": "enclosure",
+      "op": "union",
+      "cache_hit": false,
+      "seconds": 0.21833
+    }
+  ],
+  "wall_seconds": 0.318
+}

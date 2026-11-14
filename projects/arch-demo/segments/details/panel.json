@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "profiles": {},
+  "solids": {
+    "part": {
+      "op": "wall",
+      "length": 28,
+      "height": 20,
+      "thickness": 3,
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "cutouts": [
+        {
+          "shape": "slot",
+          "size": [
+            16,
+            5
+          ],
+          "center": [
+            0,
+            11
+          ]
+        }
+      ]
+    }
+  },
+  "exports": [
+    {
+      "solid": "part",
+      "path": "part.stl"
+    }
+  ]
+}

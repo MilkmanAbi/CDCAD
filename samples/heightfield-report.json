@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "version": "0.1.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "relief",
+      "path": "samples/relief.stl",
+      "sha256": "3634326009ff9634d14527a6e3b3f97d11369e8918d07d9ae96e67dcd7d01c44",
+      "vertices": 12288,
+      "faces": 24572,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 9235.75448424984,
+      "area": 5346.094121750311,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          60.0,
+          40.0,
+          8.36862745098039
+        ]
+      ],
+      "extents": [
+        60.0,
+        40.0,
+        8.36862745098039
+      ],
+      "components": 1,
+      "euler_number": 2
+    }
+  ],
+  "trace": [
+    {
+      "kind": "solids",
+      "name": "relief",
+      "op": "heightfield",
+      "cache_hit": false,
+      "seconds": 0.219225
+    }
+  ],
+  "wall_seconds": 0.5699
+}

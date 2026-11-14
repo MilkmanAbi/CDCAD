@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "version": "0.2.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "wall",
+      "path": "samples/structural-wall.stl",
+      "sha256": "dbb1e2b9552195219d9c4331b8eaf786a58499d4657f911d785497a1a4cb2b63",
+      "vertices": 474,
+      "faces": 952,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 23723.645119840163,
+      "area": 12009.267104903385,
+      "bounds": [
+        [
+          -50.0,
+          -2.5,
+          0.0
+        ],
+        [
+          50.0,
+          2.5,
+          60.0
+        ]
+      ],
+      "extents": [
+        100.0,
+        5.0,
+        60.0
+      ],
+      "components": 1,
+      "euler_number": -2
+    }
+  ],
+  "trace": [
+    {
+      "kind": "solids",
+      "name": "wall",
+      "op": "wall",
+      "cache_hit": false,
+      "seconds": 0.01809
+    }
+  ]
+}

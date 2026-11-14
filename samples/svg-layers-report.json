@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "version": "0.1.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "embossed_plate",
+      "path": "samples/svg-plate.stl",
+      "sha256": "80468eb98bfa031b636510aadc789b70fb1754ac79899f7a91861a11005381e9",
+      "vertices": 872,
+      "faces": 1744,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 12470.083217941961,
+      "area": 8764.475776198315,
+      "bounds": [
+        [
+          0.0,
+          -50.00002670288086,
+          0.0
+        ],
+        [
+          80.00004577636719,
+          0.0,
+          7.5
+        ]
+      ],
+      "extents": [
+        80.00004577636719,
+        50.00002670288086,
+        7.5
+      ],
+      "components": 1,
+      "euler_number": 0
+    }
+  ],
+  "trace": [
+    {
+      "kind": "profiles",
+      "name": "plate",
+      "op": "svg",
+      "cache_hit": false,
+      "seconds": 0.07059
+    },
+    {
+      "kind": "solids",
+      "name": "base",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.081474
+    },
+    {
+      "kind": "profiles",
+      "name": "badge",
+      "op": "svg",
+      "cache_hit": false,
+      "seconds": 0.062743
+    },
+    {
+      "kind": "solids",
+      "name": "raised",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.081209
+    },
+    {
+      "kind": "solids",
+      "name": "embossed_plate",
+      "op": "union",
+      "cache_hit": false,
+      "seconds": 0.233612
+    }
+  ],
+  "wall_seconds": 0.315
+}

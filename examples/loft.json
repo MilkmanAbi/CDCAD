@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "units": "mm",
+  "profiles": {
+    "bottom": {"op": "circle", "radius": 18, "segments": 96},
+    "shoulder": {"op": "circle", "radius": 15, "segments": 96},
+    "top": {"op": "circle", "radius": 9, "segments": 96}
+  },
+  "solids": {
+    "body": {"op": "loft", "samples": 96, "sections": [{"profile": "bottom", "z": 0}, {"profile": "shoulder", "z": 10}, {"profile": "top", "z": 30}]},
+    "bore_centered": {"op": "cylinder", "radius": 5, "height": 34},
+    "bore": {"op": "transform", "input": "bore_centered", "translate": [0, 0, 15]},
+    "adapter": {"op": "difference", "inputs": ["body", "bore"]}
+  },
+  "exports": [{"solid": "adapter", "path": "loft-adapter.stl"}]
+}

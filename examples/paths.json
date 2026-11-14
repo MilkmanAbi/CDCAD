@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "units": "mm",
+  "params": {"thickness": 2, "height": 5},
+  "profiles": {
+    "outline": {"op": "path", "d": "M0 0 L50 0 Q60 0 60 10 L60 30 Q60 40 50 40 L0 40 Z M10 10 L10 30 L45 30 L45 10 Z", "fill_rule": "evenodd", "step": 0.4},
+    "track": {"op": "stroke", "points": [[0, 50], [20, 50], [25, 55], [50, 55]], "width": "=thickness", "join": "round"}
+  },
+  "solids": {
+    "frame": {"op": "extrude", "profile": "outline", "height": "=height"},
+    "raised_path": {"op": "extrude", "profile": "track", "height": 3}
+  },
+  "exports": [{"solid": "frame", "path": "path-frame.stl"}, {"solid": "raised_path", "path": "path-track.stl"}]
+}

@@ -1,0 +1,75 @@
+{
+  "ok": true,
+  "version": "0.2.0",
+  "units": "mm",
+  "exports": [
+    {
+      "solid": "panel",
+      "path": "samples/structural-panel.stl",
+      "sha256": "34d5360c948d118463f318375a2e995dfcadc86738f90a2d5b6a283f749ba626",
+      "vertices": 3272,
+      "faces": 6604,
+      "watertight": true,
+      "winding_consistent": true,
+      "is_volume": true,
+      "volume": 9819.799088561209,
+      "area": 8676.978808045362,
+      "bounds": [
+        [
+          -40.0,
+          -25.0,
+          0.0
+        ],
+        [
+          40.0,
+          25.0,
+          3.0
+        ]
+      ],
+      "extents": [
+        80.0,
+        50.0,
+        3.0
+      ],
+      "components": 1,
+      "euler_number": -30
+    }
+  ],
+  "trace": [
+    {
+      "kind": "profiles",
+      "name": "plate",
+      "op": "rectangle",
+      "cache_hit": false,
+      "seconds": 0.000463
+    },
+    {
+      "kind": "profiles",
+      "name": "hole",
+      "op": "slot",
+      "cache_hit": false,
+      "seconds": 0.000406
+    },
+    {
+      "kind": "profiles",
+      "name": "holes",
+      "op": "grid",
+      "cache_hit": false,
+      "seconds": 0.007416
+    },
+    {
+      "kind": "profiles",
+      "name": "outline",
+      "op": "difference",
+      "cache_hit": false,
+      "seconds": 0.00942
+    },
+    {
+      "kind": "solids",
+      "name": "panel",
+      "op": "extrude",
+      "cache_hit": false,
+      "seconds": 0.025627
+    }
+  ]
+}

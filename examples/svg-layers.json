@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "units": "mm",
+  "profiles": {
+    "plate": {"op": "svg", "path": "outline.svg", "ids": ["plate"], "step": 1},
+    "badge": {"op": "svg", "path": "outline.svg", "ids": ["badge"], "step": 0.5}
+  },
+  "solids": {
+    "base": {"op": "extrude", "profile": "plate", "height": 3},
+    "raised": {"op": "extrude", "profile": "badge", "height": 5, "z": 2.5},
+    "embossed_plate": {"op": "union", "inputs": ["base", "raised"]}
+  },
+  "exports": [{"solid": "embossed_plate", "path": "svg-plate.stl"}]
+}

@@ -1,0 +1,209 @@
+{
+  "action": "set",
+  "before": {
+    "project": {
+      "project_version": 1,
+      "name": "Structural arch demo",
+      "units": "mm",
+      "params": {
+        "span": 60,
+        "rise": 30,
+        "leg": 22,
+        "rib": 6,
+        "depth": 12
+      },
+      "layers": {
+        "foundation": {
+          "enabled": true
+        },
+        "structure": {
+          "enabled": true
+        },
+        "details": {
+          "enabled": true
+        }
+      },
+      "segments": {
+        "base": {
+          "path": "segments/foundation/base.json",
+          "solid": "part",
+          "layer": "foundation"
+        },
+        "arch": {
+          "path": "segments/structure/arch.json",
+          "solid": "part",
+          "layer": "structure",
+          "attach": {
+            "target": "base",
+            "anchor": "bottom",
+            "target_anchor": "top",
+            "offset": [
+              0,
+              0,
+              -0.3
+            ]
+          }
+        },
+        "brace": {
+          "path": "segments/structure/brace.json",
+          "solid": "part",
+          "layer": "structure"
+        },
+        "panel": {
+          "path": "segments/details/panel.json",
+          "solid": "part",
+          "layer": "details",
+          "placement": {
+            "translate": [
+              0,
+              -16,
+              4.7
+            ]
+          }
+        }
+      },
+      "assemblies": {
+        "demo": {
+          "members": [
+            "base",
+            "arch",
+            "brace",
+            "panel"
+          ],
+          "mode": "union"
+        }
+      }
+    },
+    "segments": {
+      "base": {
+        "version": 1,
+        "profiles": {},
+        "solids": {
+          "part": {
+            "op": "panel",
+            "size": [
+              110,
+              42
+            ],
+            "thickness": 5,
+            "center": [
+              0,
+              0,
+              2.5
+            ],
+            "cutouts": [
+              {
+                "shape": "circle",
+                "radius": 2.2,
+                "center": [
+                  -45,
+                  12
+                ]
+              },
+              {
+                "shape": "circle",
+                "radius": 2.2,
+                "center": [
+                  45,
+                  12
+                ]
+              }
+            ]
+          }
+        },
+        "exports": [
+          {
+            "solid": "part",
+            "path": "part.stl"
+          }
+        ]
+      },
+      "arch": {
+        "version": 1,
+        "profiles": {},
+        "solids": {
+          "part": {
+            "op": "arch",
+            "span": "=span",
+            "rise": "=rise",
+            "leg": "=leg",
+            "thickness": "=rib",
+            "depth": "=depth"
+          }
+        },
+        "exports": [
+          {
+            "solid": "part",
+            "path": "part.stl"
+          }
+        ]
+      },
+      "brace": {
+        "version": 1,
+        "profiles": {},
+        "solids": {
+          "part": {
+            "op": "beam",
+            "start": [
+              -36,
+              0,
+              8
+            ],
+            "end": [
+              -43,
+              16,
+              31
+            ],
+            "size": [
+              4,
+              4
+            ]
+          }
+        },
+        "exports": [
+          {
+            "solid": "part",
+            "path": "part.stl"
+          }
+        ]
+      },
+      "panel": {
+        "version": 1,
+        "profiles": {},
+        "solids": {
+          "part": {
+            "op": "wall",
+            "length": 28,
+            "height": 20,
+            "thickness": 3,
+            "origin": [
+              0,
+              0,
+              0
+            ],
+            "cutouts": [
+              {
+                "shape": "slot",
+                "size": [
+                  16,
+                  5
+                ],
+                "center": [
+                  0,
+                  11
+                ]
+              }
+            ]
+          }
+        },
+        "exports": [
+          {
+            "solid": "part",
+            "path": "part.stl"
+          }
+        ]
+      }
+    }
+  },
+  "after_revision": "aa6c0292ee7f9e8d47e34e04e04b82a4cf4d50e4cd010e3de9557e4b05b25601"
+}

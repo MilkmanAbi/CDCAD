@@ -1,0 +1,26 @@
+# Tested environment: Windows, CPython 3.13.14; includes test dependencies.
+attrs==26.1.0
+colorama==0.4.6
+ezdxf==1.4.5
+fast_simplification==0.2.0
+fonttools==4.68.0
+iniconfig==2.3.1
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+manifold3d==3.5.4
+mapbox_earcut==2.1.0
+networkx==3.7
+numpy==2.5.4
+packaging==26.3
+pillow==12.3.0
+pluggy==1.7.0
+Pygments==2.21.0
+pyparsing==3.3.3
+pytest==9.2.0
+referencing==0.37.0
+rpds-py==2026.9.1
+scipy==1.18.1
+shapely==2.2.0
+svgelements==1.9.6
+trimesh==5.2.0
+typing_extensions==4.16.0
