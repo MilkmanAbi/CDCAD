@@ -43,6 +43,40 @@ def test_tests_import_the_source_tree_and_capabilities_names_the_package():
     assert Path(cli("capabilities")["package"]) == source
 
 
+def make_box(tmp_path, *size):
+    path = tmp_path/f"box-{'x'.join(map(str, size))}.stl"
+    cli("make", "box", "--size", *size, "-o", path)
+    return path
+
+
+def test_inspect_bed_fit_reports_as_modeled_and_any_orientation(tmp_path):
+    flat = cli("inspect", make_box(tmp_path, 100, 60, 20), "--bed", 150, 150, 150)["bed_fit"]
+    assert (flat["fits"], flat["fits_any_orientation"]) == (True, True)
+    assert flat["clearance"] == pytest.approx([50, 90, 130])
+    # 160 long on a 150 x 150 x 200 printer: too long as modeled, fine stood on its end.
+    long_part = make_box(tmp_path, 10, 160, 10)
+    fit = cli("inspect", long_part, "--bed", 150, 150, 200, "--require-fit")["bed_fit"]
+    assert (fit["fits"], fit["fits_any_orientation"]) == (False, True)
+    # Too big every way round.
+    big = make_box(tmp_path, 200, 10, 10)
+    assert cli("inspect", big, "--bed", 150, 150, 150)["bed_fit"]["fits_any_orientation"] is False
+    with pytest.raises(CADError, match="does not fit"):
+        cli("inspect", big, "--bed", 150, 150, 150, "--require-fit")
+    # Without --bed the report is unchanged.
+    assert "bed_fit" not in cli("inspect", big)
+
+
+def test_inspect_bed_fit_tolerates_float32_rounding_and_rejects_bad_input(tmp_path):
+    cap = make_box(tmp_path, 140.00001, 20, 20)       # what a 140 mm part reads back as after STL float32 rounding
+    assert cli("inspect", cap, "--bed", 140, 140, 140, "--require-fit")["bed_fit"]["fits"] is True
+    over = make_box(tmp_path, 140.01, 20, 20)
+    assert cli("inspect", over, "--bed", 140, 140, 140)["bed_fit"]["fits"] is False
+    with pytest.raises(CADError, match="positive"):
+        cli("inspect", cap, "--bed", 0, 150, 150)
+    with pytest.raises(CADError, match="needs --bed"):
+        cli("inspect", cap, "--require-fit")
+
+
 def test_recipe_rejects_typo_and_cannot_overwrite_source(tmp_path):
     with pytest.raises(CADError, match="Unknown parameter override: widht"):
         resolve_recipe(box_recipe(), {"widht": 25})

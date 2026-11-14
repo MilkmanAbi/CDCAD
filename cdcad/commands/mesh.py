@@ -11,6 +11,9 @@ def register(s):
     i.set_defaults(handler=inspect)
     i.add_argument("input")
     i.add_argument("--require-solid", action="store_true")
+    i.add_argument("--bed", nargs=3, type=float, metavar=("X", "Y", "Z"),
+                   help="Build volume in mm; reports whether the part fits as modeled and in any axis-aligned orientation")
+    i.add_argument("--require-fit", action="store_true", help="With --bed, fail unless the part fits in some axis-aligned orientation")
     edit = s.add_parser("edit", help="Transform/repair/cut/simplify an existing mesh in that order")
     edit.set_defaults(handler=edit_mesh)
     edit.add_argument("input")
@@ -57,10 +60,33 @@ def single_export(mesh, args):
 def inspect(args):
     from ..mesh import load_mesh, mesh_report, valid_mesh
 
+    if args.require_fit and not args.bed:
+        raise CADError("--require-fit needs --bed")
     mesh = load_mesh(Path(args.input))
     if args.require_solid:
         valid_mesh(mesh)
-    return {"ok": True, "units": "mm", **mesh_report(mesh)}
+    report = {"ok": True, "units": "mm", **mesh_report(mesh)}
+    if args.bed:
+        report["bed_fit"] = bed_fit(report["extents"], args.bed)
+        if args.require_fit and not report["bed_fit"]["fits_any_orientation"]:
+            raise CADError(f"Part {[round(e, 3) for e in report['extents']]} mm does not fit a {args.bed} mm build volume "
+                           "in any axis-aligned orientation")
+    return report
+
+
+FIT_TOLERANCE = 1e-4  # mm; STL stores float32, so a 140 mm part can read 140.00001
+
+
+def bed_fit(extents, bed):
+    """Compare part extents with a build volume, as modeled and with the axes reassigned freely."""
+    if any(size <= 0 for size in bed):
+        raise CADError("--bed sizes must be positive")
+    as_modeled = all(e <= b + FIT_TOLERANCE for e, b in zip(extents, bed))
+    # Axis-aligned orientations are permutations of the axes; the part fits in one
+    # of them exactly when its sorted extents fit the sorted build volume.
+    any_orientation = all(e <= b + FIT_TOLERANCE for e, b in zip(sorted(extents), sorted(bed)))
+    return {"bed": list(bed), "fits": as_modeled, "fits_any_orientation": any_orientation,
+            "clearance": [round(b - e, 6) for e, b in zip(extents, bed)]}
 
 
 def boolean_meshes(args):
