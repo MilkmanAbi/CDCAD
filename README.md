@@ -123,7 +123,7 @@ Each `cdcad` call imports numpy, scipy and the rest, which took about four secon
 - `loft` can self-intersect when the sections differ a lot, and nothing checks for it.
 - STL has no units, so everything is written in millimetres. `--units` only changes how you enter dimensions.
 - DXF input handles lines, arcs, circles, ellipses, splines and polylines in the XY plane. Open or dangling contours are rejected rather than repaired.
-- It has been run on Windows and on Ubuntu, and the CI config also covers macOS and Python 3.11. [TEST_RESULTS.md](TEST_RESULTS.md) says what was actually run.
+- The tests run in CI on Linux, macOS (Intel and Apple Silicon) and Windows, with Python 3.11 and 3.13. [TEST_RESULTS.md](TEST_RESULTS.md) has the notes from local runs.
 - A valid mesh isn't a good print. The checks are about the mesh, not about any printer.
 
 ## More

@@ -2,14 +2,16 @@
 
 - Windows x64 with CPython 3.13.14: 62 tests passed.
 - Ubuntu 24.04 x64 under WSL, on the Linux filesystem with CPython 3.12.3: 62 tests passed. The installed CLI generated and inspected a solid box from outside the source tree.
-- macOS Apple Silicon and Intel are configured in the CI matrix. Those runners have yet to execute the suite.
+- macOS Apple Silicon and Intel are configured in the CI matrix. They had not run when this was written; see the 2026-11-14 entry below for the first run.
 
-## 2026-11-14 audit run (commit `40c42f7`)
+## 2026-11-14 audit run (local runs at `40c42f7`)
 
 - Windows x64, CPython 3.13.14, pinned dependencies: 104 passed, 1 skipped (the POSIX file-mode test).
 - Ubuntu 24.04 under WSL2 on the ext4 filesystem, CPython 3.12.3, dependencies from `requirements-tested.txt` installed into a scratch directory: 105 passed, 0 skipped. This run executes the POSIX file-mode test.
 - A non-editable `pip install --no-deps .` into a clean Windows environment, then `cdcad --version`, `make box`, `inspect --require-solid --bed 150 150 150 --require-fit`, `capabilities` and `project init`, `set`, `history`, `restore` from outside the source tree: all behaved as expected.
-- Not run: macOS, Python 3.11, and the dependency lower bounds declared in `pyproject.toml`.
+- GitHub Actions, first run (commit `9228624`, which adds the README and examples): all 8 jobs passed. That is ubuntu-24.04, macos-15, macos-15-intel and windows-2025, each with Python 3.11 and 3.13. 108 tests passed on Linux and macOS; Windows passed 107 and skipped the POSIX file-mode test.
+- A fresh virtualenv with `pip install git+https://github.com/MilkmanAbi/CDCAD.git` pulled the newest dependencies (numpy 2.5.4, scipy 1.18.1, trimesh 5.2.1, shapely 2.2.0, manifold3d 3.5.5), and `cdcad --version`, `make box`, `inspect` and `extrude --path-data` then worked from an empty directory.
+- Not run: the dependency lower bounds declared in `pyproject.toml`.
 
 ## CDCAD 0.3.0 verification
 
