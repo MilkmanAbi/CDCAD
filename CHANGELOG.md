@@ -1,5 +1,8 @@
 # Unreleased
 
+- The README is now a short introduction. The operation tables, flags and format rules moved to `REFERENCE.md`.
+- Added `examples/vase.py` (a vase lathed from a formula) and `examples/ripple.py` (a numpy height map built as a relief), with tests that run them.
+- Added `publish.yml`, which builds the package and uploads it to PyPI from a GitHub release once PyPI trusts the workflow, and added project URLs and classifiers to the package metadata.
 - Added `project history` and `project restore` to read back the before-edit snapshots every edit already saved. A restore is validated, journaled and itself recorded, so it can be undone.
 - Added `inspect --bed X Y Z` and `--require-fit` to check a part against a build volume, as modeled and in any axis-aligned orientation.
 - Fixed `section` writing a vertically mirrored SVG; the drawing now matches the part and survives an SVG import round trip.
