@@ -43,6 +43,8 @@ cdcad make panel --help
 
 Dimensions default to millimeters. Pass `--units cm`, `--units m`, or `--units in` to model in other units. Exported coordinates use millimeters.
 
+Check a part against a printer's build volume with `cdcad inspect block.stl --bed 150 150 150`. The report gains `bed_fit`: whether the part fits as modeled, whether it fits with the axes reassigned, and the clearance per axis in mm. `--require-fit` turns a part that fits in no axis-aligned orientation into an error, so a script can gate on it.
+
 ## Extrude a drawing
 
 ```powershell
@@ -163,7 +165,7 @@ Each node also requires `op`. References point to nodes in the same namespace, e
 
 - Recipe dimensions use `mm` (default), `cm`, `m`, or `in`. Exported coordinates are always **millimeters**. STL has no embedded unit metadata. Mesh inspection and quick mesh editing assume their input coordinates are already mm; use explicit scale otherwise.
 - Extrusions start at Z=0 by default and grow upward. Rectangles, circles and ellipses are centered on their `center` (default `[0,0]`). Primitive boxes, cylinders and spheres are centered on the origin. This differs deliberately from extrusion's Z origin.
-- Transforms use the origin as pivot. Rotation is fixed-axis XYZ Euler in degrees. Matrices act on homogeneous column vectors.
+- Coordinates are right-handed, and extrusion grows along +Z. Transforms use the origin as pivot and apply scale, then rotation, then translation. Rotation is fixed-axis XYZ Euler in degrees; a positive Z rotation turns +X toward +Y. Matrices act on homogeneous column vectors. A `cut` keeps the side its `normal` points toward.
 - SVG physical dimensions and `viewBox` are respected at 96 PPI; a unitless pixel is 25.4/96 mm. SVG transforms are applied. The Y axis is flipped by default for right-handed CAD coordinates, which can produce negative Y positions. Use a profile transform to move it. Import precision is limited by SVG parsing and curve sampling.
 - Only filled SVG geometric shapes are imported. Stroke-only SVG, text, CSS styling, clipping, masks and filter semantics are not modeled. Convert text/strokes to filled outlines first. Selection uses shape IDs, not group IDs. SVG elements are unioned; holes must be contours inside the same path with an appropriate fill rule. Literal `path` nodes can stroke open paths with `width`.
 - DXF supports LINE, ARC, CIRCLE, ELLIPSE, SPLINE, LWPOLYLINE and planar POLYLINE contours. It reads modelspace at Z=0; nested closed contours use even-odd fill. Open/dangling segments and unsupported selected entities are rejected. Select clean layers or explode blocks/text first. Coordinates use recipe units; `$INSUNITS` is not automatically applied. Endpoint gaps are not automatically snapped closed. DXF bulges/curves are flattened with `tolerance`.
@@ -215,5 +217,7 @@ python -m pytest tests -q
 ```
 
 Tests check analytic volumes, units, topology, booleans, loft/revolve, SVG transforms/fill rules, DXF layers/line chains, source-change cache invalidation, malformed inputs, output guards, stdin JSON, and CLI editing, sections and splitting. See [TEST_RESULTS.md](TEST_RESULTS.md) for the recorded run.
+
+The pytest configuration puts the source tree first on the import path, so both `pytest` and `python -m pytest` test the checkout even when another copy of CDCAD is installed in the environment. `python -m pip install .` installs a snapshot: after you change the source, reinstall it, or install once with `python -m pip install -e . --no-deps`, so that the `cdcad` command runs the code you are editing. `cdcad capabilities` reports the `package` directory that is running.
 
 Geometry backends: [Trimesh](https://trimesh.org/trimesh.html), [Manifold booleans](https://trimesh.org/trimesh.boolean.html), [Shapely](https://shapely.readthedocs.io/en/stable/), [svgelements](https://pypi.org/project/svgelements/), and [ezdxf](https://ezdxf.readthedocs.io/).

@@ -152,6 +152,8 @@ Set units when you create a blank project, for example `cdcad project init inch-
 cdcad project info my-demo
 cdcad project set my-demo /params/span 75 --if-revision <revision-from-info>
 cdcad project patch my-demo --file changes.json
+cdcad project history my-demo
+cdcad project restore my-demo last
 ```
 
 Patch operations are `add`, `replace`, `remove`, `test` against `{project: manifest, segments: source_documents}`:
@@ -166,7 +168,9 @@ Patch operations are `add`, `replace`, `remove`, `test` against `{project: manif
 
 Mutations check schema, expressions and references before writing; a build checks geometry. Each edit saves a full before-state snapshot in `.cdcad/history/`. A lock excludes simultaneous cooperating CLI commands. `--if-revision` rejects an edit based on a stale revision. Direct file edits do not participate in locking; finish them before invoking commands.
 
-Each file is replaced atomically and multi-file mutations have a recovery journal; they are not one filesystem transaction. After an interrupted mutation use `project recover DIR --action rollback` or `--action commit`. A crashed process can leave `.cdcad/project.lock`; confirm no process is using the project before removing that lock manually. Recovery keeps its journal until writes complete. History is source snapshots, not a CAD undo solver.
+Each file is replaced atomically and multi-file mutations have a recovery journal; they are not one filesystem transaction. After an interrupted mutation use `project recover DIR --action rollback` or `--action commit`. A crashed process can leave `.cdcad/project.lock`; the lock error names the process that wrote it, so confirm that process is gone before removing the lock manually. Recovery keeps its journal until writes complete. A project created before the CDCAD rename that still has an unfinished `.agentcad/pending.json` is refused until you rename `.agentcad` to `.cdcad` while the project is idle.
+
+`project history DIR [--limit N]` lists the saved snapshots, newest first (20 by default). Each entry has an `id`, the `action` that made it, the project revision before and after it, and `current` on the edit that produced the present state. `project restore DIR ENTRY` returns the project to the state saved before that entry, which undoes that edit and every later one; `last` means the newest entry. A restore is checked before anything is written, honours `--if-revision`, uses the recovery journal, and is added to history itself, so `restore last` twice returns to where you started. A segment source file that `remove` left on disk is never overwritten silently: if restoring would replace it with different content, move the file aside first. History is source snapshots, not a CAD undo solver; generated outputs are rebuilt by `project build`.
 
 `project remove DIR NAME` rejects referenced parts. `--cascade` removes dependent assemblies and detaches dependents. Source files are retained. Changing a segment's logical `layer` does not move its source file; update its `path` in the same batch patch if desired. The new file is written and the old retained.
 

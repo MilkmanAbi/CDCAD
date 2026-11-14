@@ -1,5 +1,12 @@
 # Unreleased
 
+- Added `project history` and `project restore` to read back the before-edit snapshots every edit already saved. A restore is validated, journaled and itself recorded, so it can be undone.
+- Added `inspect --bed X Y Z` and `--require-fit` to check a part against a build volume, as modeled and in any axis-aligned orientation.
+- Fixed `section` writing a vertically mirrored SVG; the drawing now matches the part and survives an SVG import round trip.
+- Fixed exported models and project files being created owner-only (`0600`) on Linux and macOS. Writes now follow the umask and are synced before they replace the target.
+- Unknown segment names, malformed patch operations, invalid `--spec` JSON and arithmetic errors in expressions (`=1/0`, `=sqrt(-1)`) now raise `CADError` instead of `KeyError`, `ZeroDivisionError` and similar.
+- The project lock error names the holding process, and an unfinished write left in `.agentcad` is reported with the rename instruction instead of being ignored.
+- `capabilities` reports the running `package` directory, and pytest imports the source tree even when another copy is installed.
 - Added macOS, Linux, and Windows installation and testing instructions.
 - Standardized UTF-8 JSON pipes and made relative paths in saved projects portable across operating systems.
 - Added CI for Linux x64, macOS Apple Silicon and Intel, and Windows x64 on Python 3.11 and 3.13.
