@@ -1,36 +1,6 @@
-# CDCAD
+# CDCAD reference
 
-CDCAD is command-line driven CAD for dimensioned parts, parametric assemblies, and mesh editing. Build directly from dimensions, keep a reusable JSON recipe, or organize a model into an editable project with layers and assemblies. Each workflow runs from a terminal and can be reproduced in a script.
-
-For an assembly, run `cdcad project init my-demo --template arch-demo`, then `cdcad project build my-demo`. See [PROJECTS.md](PROJECTS.md) for project layout and editing. See [SCRIPTING.md](SCRIPTING.md) for stdin recipes, the Python API, and a mathematical design sweep.
-
-It accepts SVG, planar DXF, SVG path data, polygons, buffered toolpaths, grayscale heightfields, and existing triangle meshes. Recipes are reusable graphs of named profiles and solids; shared geometry is evaluated once. It supports 2D and 3D booleans, layered extrusion, lofting, revolving, arrays, transforms, plane cuts, repair, simplification, splitting, section extraction and format conversion.
-
-## Install
-
-Run these commands from the directory containing `pyproject.toml` with Python 3.11 or newer.
-
-**macOS and Linux**
-
-```sh
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install .
-cdcad --help
-```
-
-If Ubuntu or Debian reports that `ensurepip` is missing, install the distribution's `python3-venv` package and run the setup again.
-
-**Windows PowerShell**
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install .
-cdcad --help
-```
-
-You can run `python -m cdcad` from the active environment. Without activation, use `.venv/bin/cdcad` on macOS/Linux or `.\.venv\Scripts\cdcad.exe` on Windows. See [TEST_RESULTS.md](TEST_RESULTS.md) for verified platforms and [the CI workflow](.github/workflows/tests.yml) for the test matrix.
+Command details, the operation tables, and the rules for units, coordinates and file formats. The short version is in [README.md](README.md). Project folders are covered in [PROJECTS.md](PROJECTS.md) and scripting in [SCRIPTING.md](SCRIPTING.md).
 
 ## First model
 

@@ -54,4 +54,4 @@ All eight included recipe workflows were built successfully, producing nine STL 
 
 The sample workflows completed in roughly 0.09–0.57 seconds each inside an already running Python interpreter in this environment. These measurements include the content-addressed cache's writes and STL serialization checks; they exclude Python startup and importing packages. They are example measurements, not performance guarantees or comparisons to other CAD tools. Reports retain the paths from the original verification workspace.
 
-The preview is a simple orthographic triangle rendering of the actual exported meshes. It is illustrative and does not establish dimensional tolerances, self-intersection freedom, printability or engineering suitability. Geometry checks do not replace design review. See README.md for supported formats and limitations.
+The preview is a simple orthographic triangle rendering of the actual exported meshes. It is illustrative and does not establish dimensional tolerances, self-intersection freedom, printability or engineering suitability. Geometry checks do not replace design review. See REFERENCE.md for supported formats and limitations.
