@@ -4,7 +4,7 @@
 - Ubuntu 24.04 x64 under WSL, on the Linux filesystem with CPython 3.12.3: 62 tests passed. The installed CLI generated and inspected a solid box from outside the source tree.
 - macOS Apple Silicon and Intel are configured in the CI matrix. Those runners have yet to execute the suite.
 
-## 2026-11-14 audit run (branch `audit-improvements`, commit `e29cfe1`)
+## 2026-11-14 audit run (commit `40c42f7`)
 
 - Windows x64, CPython 3.13.14, pinned dependencies: 104 passed, 1 skipped (the POSIX file-mode test).
 - Ubuntu 24.04 under WSL2 on the ext4 filesystem, CPython 3.12.3, dependencies from `requirements-tested.txt` installed into a scratch directory: 105 passed, 0 skipped. This run executes the POSIX file-mode test.

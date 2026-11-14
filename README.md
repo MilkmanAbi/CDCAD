@@ -106,9 +106,12 @@ Every edit saves a snapshot, so `project history` lists them and `project restor
 Commands exit 0 on success, or 2 with a JSON error on stderr, so any language can drive it. A recipe can come in on stdin (`cdcad build -`), and from Python it's:
 
 ```python
-from cdcad import resolve_recipe, build_recipe
-recipe = resolve_recipe(raw_dict, {"h": 10})
-report = build_recipe(recipe, base_dir, out_dir)
+from pathlib import Path
+from cdcad import build_recipe, read_recipe
+
+recipe = read_recipe(Path("recipe.json"), ["h=10"])
+report = build_recipe(recipe, Path("."), Path("out"))
+print(report["exports"][0]["volume"])
 ```
 
 Each `cdcad` call imports numpy, scipy and the rest, which took about four seconds per command on the Windows machine this was written on. If you're making many models, use the Python API or `cdcad serve`, which keeps one process running and takes one JSON request per line. See [SCRIPTING.md](SCRIPTING.md).
