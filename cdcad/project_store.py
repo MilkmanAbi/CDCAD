@@ -1,7 +1,7 @@
 """Project source files, cooperative locking, revisions, and recovery."""
 from contextlib import contextmanager
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -77,7 +77,7 @@ def commit(root, before, after, action):
         if relative not in old and path.exists() and read_json(path) != value:
             raise CADError(f"Untracked source file exists and differs: {relative}; move it aside or choose another part name")
     # Keep removed segment source files for recovery/reuse. Removal edits the manifest.
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    stamp = history_stamp(root)
     history = root/METADATA_DIR/"history"/f"{stamp}-{revision(before)[:12]}.json"
     atomic_bytes(history, json_bytes({"action": action, "before": before, "after_revision": revision(after)}))
     backups = {p: old[p] if p in old else read_json(inside(root, p)) if inside(root, p).is_file() else None for p in writes}
@@ -92,6 +92,27 @@ def commit(root, before, after, action):
 
 
 HISTORY_ID = re.compile(r"[0-9]{8}T[0-9]{12}Z-[0-9a-f]{12}")
+STAMP_FORMAT = "%Y%m%dT%H%M%S%fZ"
+
+
+def history_stamp(root):
+    """A UTC timestamp later than every saved entry, so ids sort in edit order.
+
+    Two edits can read the same clock value (the Windows clock before Python 3.13
+    ticks every ~15 ms) and a clock can step backwards; ids would then tie or
+    reorder, and the revision hash that follows the stamp is not an ordering.
+    Called with the project lock held.
+    """
+    now = datetime.now(timezone.utc)
+    ids = history_ids(root)
+    if ids:
+        try:
+            newest = datetime.strptime(ids[-1].split("-")[0], STAMP_FORMAT).replace(tzinfo=timezone.utc)
+        except ValueError:
+            newest = None
+        if newest is not None and now <= newest:
+            now = newest + timedelta(microseconds=1)
+    return now.strftime(STAMP_FORMAT)
 
 
 def history_ids(root):
@@ -105,7 +126,7 @@ def history_ids(root):
 def history_entry(root, entry_id, current):
     try:
         record = read_json(Path(root).resolve()/METADATA_DIR/"history"/f"{entry_id}.json")
-        stamp = datetime.strptime(entry_id.split("-")[0], "%Y%m%dT%H%M%S%fZ")
+        stamp = datetime.strptime(entry_id.split("-")[0], STAMP_FORMAT)
         entry = {"id": entry_id, "time": stamp.isoformat(timespec="microseconds")+"Z", "action": record["action"],
                  "before_revision": revision(record["before"]), "after_revision": record["after_revision"]}
     except (OSError, ValueError, KeyError, TypeError):

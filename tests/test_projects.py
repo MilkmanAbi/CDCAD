@@ -1,4 +1,5 @@
 import copy
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -360,6 +361,33 @@ def test_history_and_restore_round_trip(tmp_path):
     assert run("project", "build", root)["built"] == 5
     # Nothing to change when the state already matches.
     assert run("project", "restore", root, older["id"])["changed"] is False
+
+
+def test_history_order_survives_a_coarse_or_backwards_clock(tmp_path, monkeypatch):
+    # Windows before Python 3.13 reads the clock in ~15 ms steps, so quick edits (or the
+    # persistent worker) can share a timestamp; a clock can also step backwards.
+    now = {"value": datetime(2030, 1, 1, tzinfo=timezone.utc)}
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now["value"]
+
+    monkeypatch.setattr(project, "datetime", Clock)
+    root = tmp_path/"demo"
+    revisions = [run("project", "init", root, "--template", "arch-demo")["revision"]]
+    for value in (61, 62, 63, 64):
+        revisions.append(run("project", "set", root, "/params/span", value)["revision"])
+    now["value"] = datetime(2020, 1, 1, tzinfo=timezone.utc)          # the clock jumps back
+    revisions.append(run("project", "set", root, "/params/span", 65)["revision"])
+    listing = run("project", "history", root)
+    ids = [entry["id"] for entry in listing["entries"]]
+    assert ids == sorted(ids, reverse=True) and len(set(ids)) == 5
+    # Newest first, each entry's "before" being the previous edit's result.
+    assert [e["before_revision"] for e in listing["entries"]] == revisions[:-1][::-1]
+    assert [e["current"] for e in listing["entries"]] == [True, False, False, False, False]
+    assert run("project", "restore", root, "last")["revision"] == revisions[-2]      # undoes span=65
+    assert span(root) == 64
 
 
 def test_restore_returns_a_removed_segment_and_refuses_to_overwrite_a_stray_file(tmp_path):
