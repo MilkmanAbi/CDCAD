@@ -34,7 +34,14 @@ def expression(text, params):
         if not isinstance(value, (float, int)) or not math.isfinite(value) or abs(value) > 1e100:
             raise CADError("Expression result is not a finite, bounded number")
         return value
-    return walk(ast.parse(text, mode="eval").body)
+    try:
+        return walk(ast.parse(text, mode="eval").body)
+    except CADError:
+        raise
+    except (ArithmeticError, ValueError, TypeError, SyntaxError, RecursionError) as exc:
+        # Division by zero, math domain errors, wrong argument counts and syntax
+        # errors are bad input, so report them as the documented error type.
+        raise CADError(f"Invalid expression {text!r}: {exc}") from exc
 
 
 def resolve_parameters(raw_params, overrides=None):

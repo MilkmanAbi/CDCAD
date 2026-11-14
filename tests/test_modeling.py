@@ -45,6 +45,37 @@ def test_expression_does_not_execute_code(expr):
         expression(expr, {})
 
 
+@pytest.mark.parametrize("expr", ["1/0", "1+", "sqrt(-1)", "sin()", "max()", "round(1,2,3,4)", "-"*1000 + "1", "2 3"])
+def test_invalid_expressions_are_cad_errors(expr):
+    with pytest.raises(cad.CADError, match="Invalid expression|Unsupported expression"):
+        expression(expr, {})
+    raw = {"version": 1, "params": {"a": "=" + expr}, "solids": {"part": {"op": "box", "size": [1, 1, 1]}},
+           "exports": [{"solid": "part", "path": "part.stl"}]}
+    with pytest.raises(cad.CADError):
+        cad.resolve_recipe(raw)
+
+
+def test_set_override_with_invalid_expression_is_cad_error():
+    raw = {"version": 1, "params": {"w": 2}, "solids": {"part": {"op": "box", "size": ["=w", 1, 1]}},
+           "exports": [{"solid": "part", "path": "part.stl"}]}
+    with pytest.raises(cad.CADError, match="Invalid expression"):
+        cad.resolve_recipe(raw, {"w": "=1/0"})
+
+
+def test_forward_parameter_references_still_resolve():
+    # The solver retries a parameter whose dependencies are not resolved yet; that
+    # retry keys off the "Unsupported expression" message, so cover it explicitly.
+    raw = {"version": 1, "params": {"a": "=b+1", "c": "=a*2", "b": 2},
+           "solids": {"part": {"op": "box", "size": ["=a", "=c", 1]}},
+           "exports": [{"solid": "part", "path": "part.stl"}]}
+    result = cad.resolve_recipe(raw)
+    assert result["params"] == {"b": 2, "a": 3, "c": 6}
+    assert result["solids"]["part"]["size"] == [3, 6, 1]
+    cyclic = {**raw, "params": {"a": "=b+1", "b": "=a+1"}}
+    with pytest.raises(cad.CADError, match="Unresolvable"):
+        cad.resolve_recipe(cyclic)
+
+
 def test_schema_rejects_typos():
     with pytest.raises(cad.CADError, match="Additional properties"):
         recipe(solids={"part": {"op": "box", "size": [1, 2, 3], "height": 2}})
