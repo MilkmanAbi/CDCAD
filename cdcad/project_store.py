@@ -114,9 +114,13 @@ def pointer_parent(document, pointer):
 def apply_patch(document, operations):
     if not isinstance(operations, list):
         raise CADError("Patch must be a JSON array of add/replace/remove/test operations")
-    for change in operations:
+    for index, change in enumerate(operations):
         if not isinstance(change, dict) or change.get("op") not in {"add", "replace", "remove", "test"}:
-            raise CADError("Unsupported JSON patch operation")
+            raise CADError(f"Unsupported JSON patch operation at index {index}")
+        if not isinstance(change.get("path"), str):
+            raise CADError(f"Patch operation {index} needs a string path")
+        if change["op"] != "remove" and "value" not in change:
+            raise CADError(f"Patch operation {index} ({change['op']}) needs a value")
         parent, key = pointer_parent(document, change["path"])
         op = change["op"]
         if isinstance(parent, list):

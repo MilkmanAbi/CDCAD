@@ -312,6 +312,48 @@ def test_repeat_limits_and_invalid_beam():
               solids={"body": {"op": "box", "size": [1, 1, 1]}})
 
 
+@pytest.mark.parametrize("argv", [
+    ("place", "nosuch", "--translate", "1", "2", "3"),
+    ("attach", "nosuch", "base"),
+    ("detach", "nosuch"),
+    ("duplicate", "nosuch", "copy"),
+    ("set", "/solids/part/size/0", "5", "--segment", "nosuch"),
+])
+def test_unknown_segment_names_are_cad_errors(tmp_path, argv):
+    root = tmp_path/"demo"
+    run("project", "init", root, "--template", "arch-demo")
+    before = project.load_state(root)
+    with pytest.raises(cad.CADError, match="Unknown segment: nosuch"):
+        run("project", argv[0], root, *argv[1:])
+    assert project.load_state(root) == before
+    assert not (root/".cdcad/pending.json").exists()
+
+
+@pytest.mark.parametrize("operations,message", [
+    ([{"op": "add", "value": 1}], "string path"),
+    ([{"op": "add", "path": 5, "value": 1}], "string path"),
+    ([{"op": "add", "path": "/project/params/extra"}], "needs a value"),
+    ([{"op": "test", "path": "/project/params/span"}], "needs a value"),
+    ([{"op": "replace", "path": "/project/params/span", "value": 70}, 7], "Unsupported JSON patch operation at index 1"),
+])
+def test_malformed_patch_operations_are_cad_errors(tmp_path, operations, message):
+    root = tmp_path/"demo"
+    run("project", "init", root, "--template", "arch-demo")
+    before = project.load_state(root)
+    file = tmp_path/"patch.json"
+    file.write_text(json.dumps(operations))
+    with pytest.raises(cad.CADError, match=message):
+        run("project", "patch", root, "--file", file)
+    assert project.load_state(root) == before
+
+
+def test_put_spec_that_is_not_json_is_a_cad_error(tmp_path):
+    root = tmp_path/"demo"
+    run("project", "init", root)
+    with pytest.raises(cad.CADError, match="--spec is not valid JSON"):
+        run("project", "put", root, "block", "--spec", "{not json")
+
+
 def test_make_cli_flags_and_import_recipe_asset_paths(tmp_path):
     path = tmp_path/"arch.stl"
     report = run("make", "arch", "--span", 40, "--thickness", 4, "--depth", 8, "-o", path)

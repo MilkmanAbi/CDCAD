@@ -105,6 +105,13 @@ def add_parser(subparsers):
     return s
 
 
+def known_segment(manifest, name):
+    """Return a segment entry, or raise a CADError rather than a bare KeyError."""
+    if name not in manifest["segments"]:
+        raise CADError(f"Unknown segment: {name}")
+    return manifest["segments"][name]
+
+
 def execute(args):
     command = args.project_command
     if command == "schema":
@@ -148,7 +155,10 @@ def execute(args):
             if args.name in m["segments"] and not args.replace:
                 raise CADError("Segment exists; use --replace")
             if args.spec is not None:
-                raw = segment_recipe(json.loads(args.spec))
+                try:
+                    raw = segment_recipe(json.loads(args.spec))
+                except json.JSONDecodeError as exc:
+                    raise CADError(f"--spec is not valid JSON: {exc}") from exc
             else:
                 raw = read_stdin_json() if args.file == "-" else read_json(args.file)
             m["layers"].setdefault(args.layer, {"enabled": True})
@@ -169,7 +179,7 @@ def execute(args):
             safe_name(args.name)
             if args.name in m["segments"] or args.name in m["assemblies"]:
                 raise CADError("Duplicate destination name already exists")
-            entry = copy.deepcopy(m["segments"][args.source])
+            entry = copy.deepcopy(known_segment(m, args.source))
             layer = safe_name(args.layer or entry["layer"])
             m["layers"].setdefault(layer, {"enabled": True})
             entry.update(layer=layer, path=f"segments/{layer}/{args.name}.json")
@@ -182,15 +192,15 @@ def execute(args):
             rebase_assets(raw, source_dir, destination_dir)
             documents[args.name] = raw
         elif command == "place":
-            entry = m["segments"][args.name]
+            entry = known_segment(m, args.name)
             for field in ("translate", "rotate", "scale"):
                 if getattr(args, field) is not None:
                     entry.setdefault("placement", {})[field] = getattr(args, field)
         elif command == "attach":
-            m["segments"][args.name]["attach"] = {"target": args.target, "anchor": args.anchor,
+            known_segment(m, args.name)["attach"] = {"target": args.target, "anchor": args.anchor,
                 "target_anchor": args.target_anchor, "offset": args.offset}
         elif command == "detach":
-            m["segments"][args.name].pop("attach", None)
+            known_segment(m, args.name).pop("attach", None)
         elif command == "stitch":
             safe_name(args.name)
             if args.name in m["segments"]:
@@ -204,6 +214,8 @@ def execute(args):
                 if not args.value.startswith("="):
                     raise CADError("Value must be JSON, or an =expression")
                 value = args.value
+            if args.segment:
+                known_segment(m, args.segment)
             document = documents[args.segment] if args.segment else m
             parent, key = pointer_parent(document, args.pointer)
             op = "replace" if isinstance(parent, list) and key != "-" else "add"
