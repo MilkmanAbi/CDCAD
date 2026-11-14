@@ -109,6 +109,8 @@ def split_mesh(args):
 
 
 def section_mesh(args):
+    from shapely import affinity
+
     from .._profiles import loops_fill, polygons
     from ..mesh import load_mesh
 
@@ -119,9 +121,13 @@ def section_mesh(args):
         raise CADError("Plane does not intersect mesh")
     xy_loops = [loop[:, :2] for loop in section.discrete]
     geom = loops_fill(xy_loops)
-    xmin, ymin, xmax, ymax = geom.bounds
+    # SVG's Y axis points down while the mesh's points up. Write -Y so the drawing
+    # looks like the part seen from +Z, and so the SVG importer (flip_y by default)
+    # restores the original handedness instead of returning a mirror image.
+    drawing = affinity.scale(geom, yfact=-1, origin=(0, 0))
+    xmin, ymin, xmax, ymax = drawing.bounds
     paths = []
-    for p in polygons(geom):
+    for p in polygons(drawing):
         for ring in [p.exterior, *p.interiors]:
             xy = list(ring.coords)
             paths.append("M " + " L ".join(f"{x:.10g},{y:.10g}" for x, y in xy) + " Z")

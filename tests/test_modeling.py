@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -327,3 +328,28 @@ def test_cli_edit_split_section_and_simplification(tmp_path):
     result = cli("split", tmp_path/"two.stl", "--out-dir", tmp_path/"parts")
     assert result.returncode == 0, result.stderr
     assert len(json.loads(result.stdout)["parts"]) == 2
+
+
+def test_section_svg_keeps_orientation_through_import(tmp_path):
+    from shapely.geometry import Point
+
+    # An L that is not symmetric in Y: foot 15 wide along the bottom, 30 tall leg on the left.
+    shape = {"op": "polygon", "points": [[0, 0], [20, 0], [20, 5], [5, 5], [5, 30], [0, 30]]}
+    solid = cad.resolve_recipe({"version": 1, "profiles": {"L": shape},
+        "solids": {"part": {"op": "extrude", "profile": "L", "height": 4}},
+        "exports": [{"solid": "part", "path": "L.stl"}]})
+    cad.build_recipe(solid, tmp_path)
+    result = cli("section", tmp_path/"L.stl", "--z", 2, "-o", tmp_path/"L.svg")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["area"] == pytest.approx(5*30 + 15*5)
+    # SVG Y points down, so the part is drawn with negated Y: the viewBox starts at -30.
+    view_box = [float(v) for v in re.search(r'viewBox="([^"]+)"', (tmp_path/"L.svg").read_text()).group(1).split()]
+    assert view_box == pytest.approx([0, -30, 20, 30])
+    # Round trip through the SVG importer (flip_y by default) must not mirror the part.
+    imported = cad.Engine(cad.resolve_recipe({"version": 1, "profiles": {"s": {"op": "svg", "path": "L.svg"}},
+        "solids": {"p": {"op": "extrude", "profile": "s", "height": 1}},
+        "exports": [{"solid": "p", "path": "o.stl"}]}), base=tmp_path).get("profiles", "s")
+    # Imported bounds are (0, -30, 20, 0): the viewBox origin maps to 0 and Y is flipped.
+    assert imported.contains(Point(15, -27))
+    assert not imported.contains(Point(15, -3))
+    assert imported.contains(Point(2, -2))
