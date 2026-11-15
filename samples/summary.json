@@ -551,20 +551,20 @@
   },
   {
     "ok": true,
-    "version": "0.1.0",
+    "version": "0.5.0",
     "units": "mm",
     "exports": [
       {
         "solid": "relief",
         "path": "samples/relief.stl",
-        "sha256": "3634326009ff9634d14527a6e3b3f97d11369e8918d07d9ae96e67dcd7d01c44",
+        "sha256": "fb68355a6045bc94c418357c7c33bd290d4f3f3251845429661ae55c0c9064e8",
         "vertices": 12288,
         "faces": 24572,
         "watertight": true,
         "winding_consistent": true,
         "is_volume": true,
-        "volume": 9235.75448424984,
-        "area": 5346.094121750311,
+        "volume": 9236.25817653476,
+        "area": 5344.838912678662,
         "bounds": [
           [
             0.0,
@@ -574,13 +574,13 @@
           [
             60.0,
             40.0,
-            8.36862745098039
+            8.371822834014893
           ]
         ],
         "extents": [
           60.0,
           40.0,
-          8.36862745098039
+          8.371822834014893
         ],
         "components": 1,
         "euler_number": 2

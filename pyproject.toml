@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,23 +7,28 @@ name = "cdcad"
 dynamic = ["version"]
 description = "Command-line driven CAD for parametric models, assemblies, and mesh editing"
 readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE", "cdcad/fonts/LICENSE-DejaVu.txt"]
 requires-python = ">=3.11"
-keywords = ["cad", "stl", "3d-printing", "parametric", "command-line"]
+keywords = ["cad", "stl", "3mf", "3d-printing", "parametric", "command-line", "implicit-surfaces", "mesh"]
 classifiers = [
   "Environment :: Console",
   "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Multimedia :: Graphics :: 3D Modeling",
+  "Topic :: Scientific/Engineering",
 ]
 dependencies = [
   "numpy>=2.1,<3", "trimesh>=4.6,<6", "shapely>=2.0,<3",
   "manifold3d>=3.0,<4", "mapbox-earcut>=1.0,<3", "jsonschema>=4.23,<5",
   "svgelements>=1.9.6,<2", "ezdxf>=1.3,<2", "Pillow>=11,<13",
-  "fast-simplification>=0.1.9,<1", "scipy>=1.14,<2", "networkx>=3.4,<4"
+  "fast-simplification>=0.1.9,<1", "scipy>=1.14,<2", "networkx>=3.4,<4", "fonttools>=4.50,<5"
 ]
 
 [project.optional-dependencies]
@@ -39,6 +44,9 @@ cdcad = "cdcad.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["cdcad", "cdcad.*"]
+
+[tool.setuptools.package-data]
+cdcad = ["fonts/*.ttf", "fonts/*.txt"]
 
 [tool.setuptools.dynamic]
 version = {attr = "cdcad._common.VERSION"}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "A (p, q) torus knot as a closed sweep. Rotation-minimising frames carry the round profile around the loop without twisting.",
+  "params": {"p": 2, "q": 3, "R": 15, "r": 6, "wire": 2.5},
+  "profiles": {"wire": {"op": "circle", "radius": "=wire", "segments": 32}},
+  "solids": {
+    "knot": {"op": "sweep", "profile": "wire", "closed": true,
+             "curve": {"x": "(R + r*cos(q*t))*cos(p*t)", "y": "(R + r*cos(q*t))*sin(p*t)", "z": "r*sin(q*t)",
+                       "samples": 900}}
+  },
+  "exports": [{"solid": "knot", "path": "torus-knot.stl"}],
+  "checks": [{"solid": "knot", "is_volume": true, "components": {"approx": 1}}]
+}

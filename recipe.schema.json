@@ -10,7 +10,8 @@
   ],
   "properties": {
     "version": {
-      "const": 1
+      "const": 1,
+      "description": "Always 1"
     },
     "units": {
       "enum": [
@@ -18,13 +19,24 @@
         "cm",
         "m",
         "in"
-      ]
+      ],
+      "description": "mm (default), cm, m or in: the unit of every length in the recipe; exports are always mm"
+    },
+    "description": {
+      "type": "string",
+      "description": "Free text about the recipe"
     },
     "params": {
       "type": "object",
       "additionalProperties": {
         "type": "number"
-      }
+      },
+      "description": "Named numbers or =expressions; any string value starting with = elsewhere is arithmetic on them"
+    },
+    "density": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Material density in g/cm^3 (PLA 1.24, PETG 1.27, ABS 1.04, aluminium 2.70); reports add mass_g"
     },
     "profiles": {
       "type": "object",
@@ -32,165 +44,7 @@
         "oneOf": [
           {
             "type": "object",
-            "properties": {
-              "op": {
-                "const": "arch_opening"
-              },
-              "span": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "rise": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "leg": {
-                "type": "number",
-                "minimum": 0
-              },
-              "segments": {
-                "type": "integer",
-                "minimum": 3,
-                "maximum": 100000
-              }
-            },
-            "required": [
-              "op",
-              "span"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "arch"
-              },
-              "span": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "rise": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "leg": {
-                "type": "number",
-                "minimum": 0
-              },
-              "segments": {
-                "type": "integer",
-                "minimum": 3,
-                "maximum": 100000
-              },
-              "thickness": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              }
-            },
-            "required": [
-              "op",
-              "span",
-              "thickness"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "frame"
-              },
-              "size": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                "minItems": 2,
-                "maxItems": 2
-              },
-              "border": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              }
-            },
-            "required": [
-              "op",
-              "size",
-              "border"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "slot"
-              },
-              "size": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                "minItems": 2,
-                "maxItems": 2
-              },
-              "center": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 2,
-                "maxItems": 2
-              }
-            },
-            "required": [
-              "op",
-              "size"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "grid"
-              },
-              "input": {
-                "type": "string",
-                "minLength": 1
-              },
-              "counts": {
-                "type": "array",
-                "items": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 10000
-                },
-                "minItems": 2,
-                "maxItems": 2
-              },
-              "step": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 2,
-                "maxItems": 2
-              }
-            },
-            "required": [
-              "op",
-              "input",
-              "counts",
-              "step"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
+            "description": "Axis-aligned rectangle centred on `center`, optionally with rounded corners.",
             "properties": {
               "op": {
                 "const": "rectangle"
@@ -202,7 +56,8 @@
                   "exclusiveMinimum": 0
                 },
                 "minItems": 2,
-                "maxItems": 2
+                "maxItems": 2,
+                "description": "[width, depth]"
               },
               "center": {
                 "type": "array",
@@ -210,11 +65,23 @@
                   "type": "number"
                 },
                 "minItems": 2,
-                "maxItems": 2
+                "maxItems": 2,
+                "description": "Centre point",
+                "default": [
+                  0,
+                  0
+                ]
               },
               "radius": {
                 "type": "number",
-                "minimum": 0
+                "minimum": 0,
+                "description": "Corner radius; at most half the shorter side",
+                "default": 0
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -225,13 +92,15 @@
           },
           {
             "type": "object",
+            "description": "Circle as a regular polygon with `segments` sides.",
             "properties": {
               "op": {
                 "const": "circle"
               },
               "radius": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Radius"
               },
               "center": {
                 "type": "array",
@@ -239,12 +108,24 @@
                   "type": "number"
                 },
                 "minItems": 2,
-                "maxItems": 2
+                "maxItems": 2,
+                "description": "Centre point",
+                "default": [
+                  0,
+                  0
+                ]
               },
               "segments": {
                 "type": "integer",
                 "minimum": 3,
-                "maximum": 100000
+                "maximum": 100000,
+                "description": "Number of sides",
+                "default": 96
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -255,6 +136,7 @@
           },
           {
             "type": "object",
+            "description": "Ellipse with radii [rx, ry].",
             "properties": {
               "op": {
                 "const": "ellipse"
@@ -266,7 +148,8 @@
                   "exclusiveMinimum": 0
                 },
                 "minItems": 2,
-                "maxItems": 2
+                "maxItems": 2,
+                "description": "[rx, ry]"
               },
               "center": {
                 "type": "array",
@@ -274,12 +157,24 @@
                   "type": "number"
                 },
                 "minItems": 2,
-                "maxItems": 2
+                "maxItems": 2,
+                "description": "Centre point",
+                "default": [
+                  0,
+                  0
+                ]
               },
               "segments": {
                 "type": "integer",
                 "minimum": 3,
-                "maximum": 100000
+                "maximum": 100000,
+                "description": "Number of sides",
+                "default": 96
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -290,6 +185,60 @@
           },
           {
             "type": "object",
+            "description": "Regular polygon such as a hexagon. Give either `radius` (centre to corner) or `across_flats` (distance between opposite flat sides, as for nuts and hex keys).",
+            "properties": {
+              "op": {
+                "const": "regular_polygon"
+              },
+              "sides": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 1000,
+                "description": "Number of sides"
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Circumradius (centre to corner)"
+              },
+              "across_flats": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Width across flats; the alternative to radius"
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Centre point",
+                "default": [
+                  0,
+                  0
+                ]
+              },
+              "rotate": {
+                "type": "number",
+                "description": "Rotation in degrees",
+                "default": 0
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "sides"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Polygon from points, optionally with holes (each hole is a point ring).",
             "properties": {
               "op": {
                 "const": "polygon"
@@ -304,7 +253,8 @@
                   "minItems": 2,
                   "maxItems": 2
                 },
-                "minItems": 3
+                "minItems": 3,
+                "description": "Outer boundary [[x, y], ...]"
               },
               "holes": {
                 "type": "array",
@@ -320,7 +270,14 @@
                   },
                   "minItems": 3
                 },
-                "minItems": 0
+                "minItems": 0,
+                "description": "Rings inside the boundary that are cut out",
+                "default": []
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -331,6 +288,7 @@
           },
           {
             "type": "object",
+            "description": "A polyline thickened to `width`, like a pen line.",
             "properties": {
               "op": {
                 "const": "stroke"
@@ -345,28 +303,39 @@
                   "minItems": 2,
                   "maxItems": 2
                 },
-                "minItems": 2
+                "minItems": 2,
+                "description": "Points along the line"
               },
               "width": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Line width"
               },
               "closed": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Join the last point back to the first",
+                "default": false
               },
               "cap": {
                 "enum": [
                   "round",
                   "square",
                   "flat"
-                ]
+                ],
+                "description": "End cap style"
               },
               "join": {
                 "enum": [
                   "round",
                   "mitre",
                   "bevel"
-                ]
+                ],
+                "description": "Corner style"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -378,27 +347,278 @@
           },
           {
             "type": "object",
+            "description": "Rounded slot (stadium) of overall size [width, height].",
+            "properties": {
+              "op": {
+                "const": "slot"
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[width, height]"
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Centre point",
+                "default": [
+                  0,
+                  0
+                ]
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "size"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Region between the graph of a function and a base line: with var x it is the area between y = f(x) and y = base for x in range; with var y it is between x = f(y) and x = base, which is the shape `revolve` turns into a vase or knob.",
+            "properties": {
+              "op": {
+                "const": "function"
+              },
+              "f": {
+                "type": "string",
+                "minLength": 1,
+                "x-cdcad-variables": [
+                  "x",
+                  "y"
+                ],
+                "description": "The function, of x or y according to var, e.g. 18 + 6*sin(y/12)"
+              },
+              "range": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[start, end] of the variable"
+              },
+              "var": {
+                "enum": [
+                  "x",
+                  "y"
+                ],
+                "description": "The free variable"
+              },
+              "base": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "x-cdcad-variables": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                ],
+                "description": "The other boundary: a number or a function of the same variable",
+                "default": 0
+              },
+              "samples": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 100000,
+                "description": "Points along the curve",
+                "default": 128
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "f",
+              "range"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Closed parametric curve (x(t), y(t)) for t in [start, end]; the end joins the start. Self-intersecting curves are filled even-odd.",
+            "properties": {
+              "op": {
+                "const": "curve"
+              },
+              "x": {
+                "type": "string",
+                "minLength": 1,
+                "x-cdcad-variables": [
+                  "t"
+                ],
+                "description": "x as a function of t"
+              },
+              "y": {
+                "type": "string",
+                "minLength": 1,
+                "x-cdcad-variables": [
+                  "t"
+                ],
+                "description": "y as a function of t"
+              },
+              "t": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Parameter range",
+                "default": [
+                  0,
+                  "tau"
+                ]
+              },
+              "samples": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 1000000,
+                "description": "Points along the curve",
+                "default": 256
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Text outline from a TrueType/OpenType font; bundled DejaVu Sans by default (Latin, Greek and math symbols). `size` is the height of capital letters. Use \\n for new lines.",
+            "properties": {
+              "op": {
+                "const": "text"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "x-cdcad-literal": true,
+                "description": "The text"
+              },
+              "size": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Capital-letter height",
+                "default": 10
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A .ttf/.otf font file instead of the bundled one"
+              },
+              "halign": {
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ],
+                "description": "Horizontal alignment to x = 0"
+              },
+              "valign": {
+                "enum": [
+                  "baseline",
+                  "bottom",
+                  "center",
+                  "top"
+                ],
+                "description": "Vertical alignment to y = 0"
+              },
+              "spacing": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Letter-spacing factor",
+                "default": 1
+              },
+              "line_spacing": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Line height as a multiple of the font size",
+                "default": 1.2
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64,
+                "description": "Line segments per curved glyph edge",
+                "default": 6
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Region from SVG path data. Closed subpaths are filled; give `width` to stroke instead.",
             "properties": {
               "op": {
                 "const": "path"
               },
               "d": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "x-cdcad-literal": true,
+                "description": "SVG path data, e.g. M0 0 H40 V25 H0 Z"
               },
               "width": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Stroke the path with this width instead of filling it"
               },
               "step": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Maximum spacing of samples on curves",
+                "default": 0.5
               },
               "fill_rule": {
                 "enum": [
                   "evenodd",
                   "nonzero"
-                ]
+                ],
+                "description": "How nested contours fill"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -409,34 +629,48 @@
           },
           {
             "type": "object",
+            "description": "Filled shapes from an SVG file, in true size (96 px per inch). Y is flipped so the drawing reads the right way up. Open filled paths are closed, as SVG viewers do; strokes and text are not imported.",
             "properties": {
               "op": {
                 "const": "svg"
               },
               "path": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "SVG file, relative to the recipe"
               },
               "ids": {
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "x-cdcad-literal": true
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Only these shape ids"
               },
               "step": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Curve sample spacing in SVG px",
+                "default": 0.5
               },
               "flip_y": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Flip Y for right-handed CAD coordinates",
+                "default": true
               },
               "fill_rule": {
                 "enum": [
                   "evenodd",
                   "nonzero"
-                ]
+                ],
+                "description": "Override each shape's fill-rule"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -447,25 +681,36 @@
           },
           {
             "type": "object",
+            "description": "Closed contours from a DXF file (lines, arcs, circles, ellipses, splines, polylines at Z=0). Nested contours become holes. Layer names match regardless of case.",
             "properties": {
               "op": {
                 "const": "dxf"
               },
               "path": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "DXF file, relative to the recipe"
               },
               "layers": {
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "x-cdcad-literal": true
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Only these layers"
               },
               "tolerance": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Curve flattening tolerance",
+                "default": 0.05
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -476,6 +721,7 @@
           },
           {
             "type": "object",
+            "description": "Merge profiles.",
             "properties": {
               "op": {
                 "const": "union"
@@ -486,7 +732,13 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Profile names"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -497,6 +749,7 @@
           },
           {
             "type": "object",
+            "description": "Subtract every later profile from the first.",
             "properties": {
               "op": {
                 "const": "difference"
@@ -507,7 +760,13 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "minItems": 2
+                "minItems": 2,
+                "description": "Profile names"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -518,6 +777,7 @@
           },
           {
             "type": "object",
+            "description": "Keep the area common to all profiles.",
             "properties": {
               "op": {
                 "const": "intersection"
@@ -528,7 +788,13 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "minItems": 2
+                "minItems": 2,
+                "description": "Profile names"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -539,23 +805,32 @@
           },
           {
             "type": "object",
+            "description": "Grow (positive) or shrink (negative) a profile by a distance; rounds or mitres corners.",
             "properties": {
               "op": {
                 "const": "offset"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Profile name"
               },
               "distance": {
-                "type": "number"
+                "type": "number",
+                "description": "Offset distance"
               },
               "join": {
                 "enum": [
                   "round",
                   "mitre",
                   "bevel"
-                ]
+                ],
+                "description": "Corner style"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -567,21 +842,15 @@
           },
           {
             "type": "object",
+            "description": "Scale, then rotate (degrees), then translate a profile about the origin.",
             "properties": {
               "op": {
                 "const": "transform"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
-              },
-              "translate": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 2,
-                "maxItems": 2
+                "minLength": 1,
+                "description": "Profile name"
               },
               "scale": {
                 "type": "array",
@@ -589,10 +858,35 @@
                   "type": "number"
                 },
                 "minItems": 2,
-                "maxItems": 2
+                "maxItems": 2,
+                "description": "[sx, sy]; negative mirrors",
+                "default": [
+                  1,
+                  1
+                ]
               },
               "rotate": {
-                "type": "number"
+                "type": "number",
+                "description": "Degrees counter-clockwise",
+                "default": 0
+              },
+              "translate": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[dx, dy]",
+                "default": [
+                  0,
+                  0
+                ]
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -600,640 +894,112 @@
               "input"
             ],
             "additionalProperties": false
-          }
-        ]
-      }
-    },
-    "solids": {
-      "type": "object",
-      "additionalProperties": {
-        "oneOf": [
+          },
           {
             "type": "object",
+            "description": "Convex hull of one or more profiles.",
             "properties": {
               "op": {
-                "const": "arch"
+                "const": "hull"
               },
-              "span": {
-                "type": "number",
-                "exclusiveMinimum": 0
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Profile name"
               },
-              "rise": {
-                "type": "number",
-                "exclusiveMinimum": 0
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "description": "Several profiles"
               },
-              "leg": {
-                "type": "number",
-                "minimum": 0
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Copies of a profile: copy i is rotated by i*rotate degrees about `center`, then moved by i*step. With step [0, 0] and rotate 360/count this is a polar (circular) pattern.",
+            "properties": {
+              "op": {
+                "const": "array"
               },
-              "segments": {
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Profile name"
+              },
+              "count": {
                 "type": "integer",
-                "minimum": 3,
-                "maximum": 100000
+                "minimum": 1,
+                "maximum": 10000,
+                "description": "Number of copies"
               },
-              "thickness": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "depth": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "origin": {
+              "step": {
                 "type": "array",
                 "items": {
                   "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
-              }
-            },
-            "required": [
-              "op",
-              "span",
-              "thickness",
-              "depth"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "wall"
-              },
-              "length": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "height": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "thickness": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "cutouts": {
-                "type": "array",
-                "items": {
-                  "oneOf": [
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "size"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "rectangle"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "size": {
-                          "type": "array",
-                          "items": {
-                            "type": "number",
-                            "exclusiveMinimum": 0
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "radius": {
-                          "type": "number",
-                          "minimum": 0
-                        }
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "radius"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "circle"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "radius": {
-                          "type": "number",
-                          "exclusiveMinimum": 0
-                        }
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "size"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "slot"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "size": {
-                          "type": "array",
-                          "items": {
-                            "type": "number",
-                            "exclusiveMinimum": 0
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        }
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "span"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "arch"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "span": {
-                          "type": "number",
-                          "exclusiveMinimum": 0
-                        },
-                        "rise": {
-                          "type": "number",
-                          "exclusiveMinimum": 0
-                        },
-                        "leg": {
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "segments": {
-                          "type": "integer",
-                          "minimum": 3,
-                          "maximum": 100000
-                        }
-                      }
-                    }
-                  ]
-                },
-                "minItems": 0
-              },
-              "origin": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
-              }
-            },
-            "required": [
-              "op",
-              "length",
-              "height",
-              "thickness"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "panel"
-              },
-              "size": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "exclusiveMinimum": 0
                 },
                 "minItems": 2,
-                "maxItems": 2
-              },
-              "thickness": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "cutouts": {
-                "type": "array",
-                "items": {
-                  "oneOf": [
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "size"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "rectangle"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "size": {
-                          "type": "array",
-                          "items": {
-                            "type": "number",
-                            "exclusiveMinimum": 0
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "radius": {
-                          "type": "number",
-                          "minimum": 0
-                        }
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "radius"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "circle"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "radius": {
-                          "type": "number",
-                          "exclusiveMinimum": 0
-                        }
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "size"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "slot"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "size": {
-                          "type": "array",
-                          "items": {
-                            "type": "number",
-                            "exclusiveMinimum": 0
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        }
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "shape",
-                        "span"
-                      ],
-                      "properties": {
-                        "shape": {
-                          "const": "arch"
-                        },
-                        "center": {
-                          "type": "array",
-                          "items": {
-                            "type": "number"
-                          },
-                          "minItems": 2,
-                          "maxItems": 2
-                        },
-                        "rotate": {
-                          "type": "number"
-                        },
-                        "span": {
-                          "type": "number",
-                          "exclusiveMinimum": 0
-                        },
-                        "rise": {
-                          "type": "number",
-                          "exclusiveMinimum": 0
-                        },
-                        "leg": {
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "segments": {
-                          "type": "integer",
-                          "minimum": 3,
-                          "maximum": 100000
-                        }
-                      }
-                    }
-                  ]
-                },
-                "minItems": 0
-              },
-              "plane": {
-                "enum": [
-                  "xy",
-                  "xz",
-                  "yz"
+                "maxItems": 2,
+                "description": "Translation between copies",
+                "default": [
+                  0,
+                  0
                 ]
+              },
+              "rotate": {
+                "type": "number",
+                "description": "Degrees between copies",
+                "default": 0
               },
               "center": {
                 "type": "array",
                 "items": {
                   "type": "number"
                 },
-                "minItems": 3,
-                "maxItems": 3
-              },
-              "radius": {
-                "type": "number",
-                "minimum": 0
-              }
-            },
-            "required": [
-              "op",
-              "size",
-              "thickness"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "frame"
-              },
-              "size": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
                 "minItems": 2,
-                "maxItems": 2
-              },
-              "border": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "depth": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "plane": {
-                "enum": [
-                  "xy",
-                  "xz",
-                  "yz"
+                "maxItems": 2,
+                "description": "Rotation centre",
+                "default": [
+                  0,
+                  0
                 ]
               },
-              "center": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
-              }
-            },
-            "required": [
-              "op",
-              "size",
-              "border",
-              "depth"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "beam"
-              },
-              "start": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
-              },
-              "end": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
-              },
-              "size": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                "minItems": 2,
-                "maxItems": 2
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "op",
-              "start",
-              "end",
-              "size"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "drill"
-              },
-              "input": {
+              "note": {
                 "type": "string",
-                "minLength": 1
-              },
-              "positions": {
-                "type": "array",
-                "items": {
-                  "type": "array",
-                  "items": {
-                    "type": "number"
-                  },
-                  "minItems": 3,
-                  "maxItems": 3
-                },
-                "minItems": 1
-              },
-              "radius": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "depth": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "axis": {
-                "enum": [
-                  "x",
-                  "y",
-                  "z"
-                ]
-              },
-              "segments": {
-                "type": "integer",
-                "minimum": 3,
-                "maximum": 100000
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
               "op",
               "input",
-              "positions",
-              "radius",
-              "depth"
+              "count"
             ],
             "additionalProperties": false
           },
           {
             "type": "object",
+            "description": "Rectangular grid of copies: counts [nx, ny] spaced by step [dx, dy].",
             "properties": {
               "op": {
-                "const": "align"
+                "const": "grid"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
-              },
-              "target": {
-                "type": "string",
-                "minLength": 1
-              },
-              "anchor": {
-                "enum": [
-                  "center",
-                  "left",
-                  "right",
-                  "front",
-                  "back",
-                  "bottom",
-                  "top"
-                ]
-              },
-              "target_anchor": {
-                "enum": [
-                  "center",
-                  "left",
-                  "right",
-                  "front",
-                  "back",
-                  "bottom",
-                  "top"
-                ]
-              },
-              "offset": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
-              }
-            },
-            "required": [
-              "op",
-              "input",
-              "target"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "repeat"
-              },
-              "input": {
-                "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Profile name"
               },
               "counts": {
                 "type": "array",
@@ -1242,19 +1008,23 @@
                   "minimum": 1,
                   "maximum": 10000
                 },
-                "minItems": 3,
-                "maxItems": 3
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[nx, ny]"
               },
               "step": {
                 "type": "array",
                 "items": {
                   "type": "number"
                 },
-                "minItems": 3,
-                "maxItems": 3
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[dx, dy]"
               },
-              "fuse": {
-                "type": "boolean"
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1267,20 +1037,422 @@
           },
           {
             "type": "object",
+            "description": "Opening of an arch: straight legs of height `leg` under a semi-ellipse of `rise`.",
+            "properties": {
+              "op": {
+                "const": "arch_opening"
+              },
+              "span": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Clear width"
+              },
+              "rise": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Height of the curve"
+              },
+              "leg": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Straight leg height",
+                "default": 0
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Curve sides",
+                "default": 64
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "span"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Arch band of `thickness` around an arch opening.",
+            "properties": {
+              "op": {
+                "const": "arch"
+              },
+              "span": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Clear width"
+              },
+              "thickness": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Band thickness"
+              },
+              "rise": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Height of the curve"
+              },
+              "leg": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Straight leg height",
+                "default": 0
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Curve sides",
+                "default": 64
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "span",
+              "thickness"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Rectangular frame: outer size minus an inset of `border`.",
+            "properties": {
+              "op": {
+                "const": "frame"
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Outer [width, height]"
+              },
+              "border": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Frame width"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "size",
+              "border"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Named 2D regions"
+    },
+    "solids": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Box centred on the origin.",
+            "properties": {
+              "op": {
+                "const": "box"
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "[x, y, z]"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "size"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Cylinder along Z, centred on the origin.",
+            "properties": {
+              "op": {
+                "const": "cylinder"
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Radius"
+              },
+              "height": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Height"
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Sides",
+                "default": 96
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "radius",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Cone or frustum along Z, centred on the origin: `radius` at the bottom, `radius_top` at the top.",
+            "properties": {
+              "op": {
+                "const": "cone"
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Bottom radius"
+              },
+              "height": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Height"
+              },
+              "radius_top": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Top radius; 0 makes a point",
+                "default": 0
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Sides",
+                "default": 96
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "radius",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Sphere centred on the origin (an icosphere).",
+            "properties": {
+              "op": {
+                "const": "sphere"
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Radius"
+              },
+              "subdivisions": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 7,
+                "description": "Refinement level",
+                "default": 3
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "radius"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Torus around the Z axis, centred on the origin.",
+            "properties": {
+              "op": {
+                "const": "torus"
+              },
+              "major": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Distance from the axis to the tube centre"
+              },
+              "minor": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Tube radius"
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Sides around the axis",
+                "default": 96
+              },
+              "minor_segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Sides around the tube",
+                "default": 48
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "major",
+              "minor"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Solid from vertices and faces (each face lists vertex indices, any winding; polygons are split into triangles). Without faces it is the convex hull of the points.",
+            "properties": {
+              "op": {
+                "const": "polyhedron"
+              },
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "minItems": 4,
+                "description": "[[x, y, z], ...]"
+              },
+              "faces": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "minItems": 3
+                },
+                "minItems": 1,
+                "description": "Faces as vertex index lists"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "points"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Extrude a profile up from `z`. `twist` turns the top (degrees) and `scale` resizes it, which makes twisted columns and tapers.",
             "properties": {
               "op": {
                 "const": "extrude"
               },
               "profile": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Profile name"
               },
               "height": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Height"
               },
               "z": {
-                "type": "number"
+                "type": "number",
+                "description": "Starting Z",
+                "default": 0
+              },
+              "twist": {
+                "type": "number",
+                "description": "Rotation of the top in degrees, counter-clockwise",
+                "default": 0
+              },
+              "scale": {
+                "oneOf": [
+                  {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                ],
+                "description": "Top size relative to the bottom: a number or [sx, sy]",
+                "default": 1
+              },
+              "slices": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000,
+                "description": "Layers for twist/scale"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1292,6 +1464,45 @@
           },
           {
             "type": "object",
+            "description": "Turn a profile around the Z axis. Profile X is the radius (X >= 0), profile Y becomes Z.",
+            "properties": {
+              "op": {
+                "const": "revolve"
+              },
+              "profile": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Profile name: one polygon without holes, X >= 0"
+              },
+              "angle": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 360,
+                "description": "Sweep angle in degrees; less than 360 leaves flat ends",
+                "default": 360
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Sides for a full turn",
+                "default": 96
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "profile"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Skin a solid through profiles at increasing Z heights (one hole-free outline each).",
             "properties": {
               "op": {
                 "const": "loft"
@@ -1315,12 +1526,20 @@
                   ],
                   "additionalProperties": false
                 },
-                "minItems": 2
+                "minItems": 2,
+                "description": "[{profile, z}, ...] with strictly increasing z"
               },
               "samples": {
                 "type": "integer",
                 "minimum": 3,
-                "maximum": 100000
+                "maximum": 100000,
+                "description": "Points per outline",
+                "default": 96
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1331,18 +1550,116 @@
           },
           {
             "type": "object",
+            "description": "Sweep a profile along a 3D path: a list of `points` or a parametric `curve`. The profile's X and Y axes follow the path with rotation-minimising frames, or with `frame` up, keep Y towards the `up` vector (best for helices: threads, springs). `closed` joins the ends into a ring.",
             "properties": {
               "op": {
-                "const": "revolve"
+                "const": "sweep"
               },
               "profile": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Profile name (holes allowed)"
               },
-              "segments": {
-                "type": "integer",
-                "minimum": 3,
-                "maximum": 100000
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "minItems": 2,
+                "description": "Path points"
+              },
+              "curve": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "string",
+                    "minLength": 1,
+                    "x-cdcad-variables": [
+                      "t"
+                    ]
+                  },
+                  "y": {
+                    "type": "string",
+                    "minLength": 1,
+                    "x-cdcad-variables": [
+                      "t"
+                    ]
+                  },
+                  "z": {
+                    "type": "string",
+                    "minLength": 1,
+                    "x-cdcad-variables": [
+                      "t"
+                    ]
+                  },
+                  "t": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "samples": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 1000000
+                  }
+                },
+                "description": "{x, y, z: functions of t, t: [a, b], samples}"
+              },
+              "closed": {
+                "type": "boolean",
+                "description": "Path is a loop",
+                "default": false
+              },
+              "frame": {
+                "enum": [
+                  "rmf",
+                  "up"
+                ],
+                "description": "How the profile turns"
+              },
+              "up": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Reference direction",
+                "default": [
+                  0,
+                  0,
+                  1
+                ]
+              },
+              "twist": {
+                "type": "number",
+                "description": "Extra roll along the path in degrees",
+                "default": 0
+              },
+              "scale": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Profile scale at the end (linear along the path)",
+                "default": 1
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1353,112 +1670,137 @@
           },
           {
             "type": "object",
+            "description": "Solid where f(x, y, z) < 0, meshed inside `bounds`: spheres, gyroids, blobs. The region is clipped (and closed) by the bounds box.",
             "properties": {
               "op": {
-                "const": "box"
+                "const": "implicit"
               },
-              "size": {
+              "f": {
+                "type": "string",
+                "minLength": 1,
+                "x-cdcad-variables": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "description": "Field; negative inside, e.g. x**2 + y**2 + z**2 - 10**2"
+              },
+              "bounds": {
                 "type": "array",
                 "items": {
-                  "type": "number",
-                  "exclusiveMinimum": 0
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 },
-                "minItems": 3,
-                "maxItems": 3
-              }
-            },
-            "required": [
-              "op",
-              "size"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "cylinder"
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[[xmin, ymin, zmin], [xmax, ymax, zmax]]"
               },
-              "radius": {
+              "resolution": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Grid spacing; smaller is finer and slower"
               },
-              "height": {
+              "level": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "description": "Surface where f equals this value",
+                "default": 0
               },
-              "segments": {
-                "type": "integer",
-                "minimum": 3,
-                "maximum": 100000
-              }
-            },
-            "required": [
-              "op",
-              "radius",
-              "height"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "sphere"
-              },
-              "radius": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "subdivisions": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 7
-              }
-            },
-            "required": [
-              "op",
-              "radius"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "op": {
-                "const": "import"
-              },
-              "path": {
+              "note": {
                 "type": "string",
-                "minLength": 1
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "f",
+              "bounds"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Solid under a surface z = f(x, y) over a rectangle, down to a flat bottom at `base`.",
+            "properties": {
+              "op": {
+                "const": "graph"
               },
-              "units": {
-                "enum": [
-                  "mm",
-                  "cm",
-                  "m",
-                  "in"
+              "f": {
+                "type": "string",
+                "minLength": 1,
+                "x-cdcad-variables": [
+                  "x",
+                  "y"
+                ],
+                "description": "Height as a function of x and y"
+              },
+              "x": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[xmin, xmax]"
+              },
+              "y": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[ymin, ymax]"
+              },
+              "base": {
+                "type": "number",
+                "description": "Z of the flat bottom; f must stay above it",
+                "default": 0
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 2,
+                  "maximum": 4096
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Grid points [nx, ny]",
+                "default": [
+                  128,
+                  128
                 ]
               },
-              "repair": {
-                "type": "boolean"
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
               "op",
-              "path"
+              "f",
+              "x",
+              "y"
             ],
             "additionalProperties": false
           },
           {
             "type": "object",
+            "description": "Relief from a grayscale picture or a 2D .npy array of values in [0, 1]: black is `base`, white is base + height. Pictures keep their on-screen orientation (top row at high Y); arrays put row 0 at Y = 0. 16-bit PNGs keep their precision.",
             "properties": {
               "op": {
                 "const": "heightfield"
               },
               "path": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Image or .npy file"
               },
               "size": {
                 "type": "array",
@@ -1467,23 +1809,40 @@
                   "exclusiveMinimum": 0
                 },
                 "minItems": 2,
-                "maxItems": 2
+                "maxItems": 2,
+                "description": "[x, y] size"
               },
               "height": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Relief height"
               },
               "base": {
                 "type": "number",
-                "exclusiveMinimum": 0
+                "exclusiveMinimum": 0,
+                "description": "Thickness under black",
+                "default": 1
               },
               "max_samples": {
                 "type": "integer",
                 "minimum": 2,
-                "maximum": 2048
+                "maximum": 2048,
+                "description": "Resample the longer side to at most this",
+                "default": 256
               },
               "invert": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "White low, black high",
+                "default": false
+              },
+              "flip_y": {
+                "type": "boolean",
+                "description": "Flip rows (default: true for pictures, false for arrays)"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1496,6 +1855,45 @@
           },
           {
             "type": "object",
+            "description": "Mesh file (STL, 3MF, OBJ, PLY, OFF, GLB). 3MF files carry their unit; for others give `units`.",
+            "properties": {
+              "op": {
+                "const": "import"
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Mesh file"
+              },
+              "units": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in"
+                ],
+                "description": "Units of the file's coordinates"
+              },
+              "repair": {
+                "type": "boolean",
+                "description": "Merge vertices, drop degenerate faces, fill simple holes",
+                "default": false
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Fuse solids into one (mesh boolean).",
             "properties": {
               "op": {
                 "const": "union"
@@ -1506,7 +1904,13 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Solid names"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1517,6 +1921,7 @@
           },
           {
             "type": "object",
+            "description": "Subtract every later solid from the first (mesh boolean).",
             "properties": {
               "op": {
                 "const": "difference"
@@ -1527,7 +1932,13 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "minItems": 2
+                "minItems": 2,
+                "description": "Solid names"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1538,6 +1949,7 @@
           },
           {
             "type": "object",
+            "description": "Keep the volume common to all solids (mesh boolean).",
             "properties": {
               "op": {
                 "const": "intersection"
@@ -1548,7 +1960,13 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "minItems": 2
+                "minItems": 2,
+                "description": "Solid names"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1559,6 +1977,7 @@
           },
           {
             "type": "object",
+            "description": "Put solids in one mesh without fusing them (fast; overlaps remain overlaps).",
             "properties": {
               "op": {
                 "const": "combine"
@@ -1569,7 +1988,13 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Solid names"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1580,29 +2005,15 @@
           },
           {
             "type": "object",
+            "description": "Scale, then rotate (XYZ Euler degrees), then translate about the origin; or one 4x4 matrix.",
             "properties": {
               "op": {
                 "const": "transform"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
-              },
-              "translate": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
-              },
-              "rotate": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 3,
-                "maxItems": 3
+                "minLength": 1,
+                "description": "Solid name"
               },
               "scale": {
                 "type": "array",
@@ -1610,7 +2021,41 @@
                   "type": "number"
                 },
                 "minItems": 3,
-                "maxItems": 3
+                "maxItems": 3,
+                "description": "[sx, sy, sz]; negative mirrors",
+                "default": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "rotate": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "[rx, ry, rz] degrees",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "translate": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "[dx, dy, dz]",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
               },
               "matrix": {
                 "type": "array",
@@ -1623,7 +2068,13 @@
                   "maxItems": 4
                 },
                 "minItems": 4,
-                "maxItems": 4
+                "maxItems": 4,
+                "description": "Affine 4x4 for column vectors, instead of the others"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1634,18 +2085,78 @@
           },
           {
             "type": "object",
+            "description": "Reflect a solid in the plane through `origin` with `normal`; `keep` also keeps the original (fused).",
+            "properties": {
+              "op": {
+                "const": "mirror"
+              },
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Solid name"
+              },
+              "normal": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Plane normal",
+                "default": [
+                  1,
+                  0,
+                  0
+                ]
+              },
+              "origin": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "A point on the plane",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "keep": {
+                "type": "boolean",
+                "description": "Union the mirror image with the original",
+                "default": false
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Copies of a solid: copy i is rotated by i*rotate (XYZ degrees about the origin), then moved by i*step. Rotate [0, 0, 360/count] makes a polar pattern.",
             "properties": {
               "op": {
                 "const": "array"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Solid name"
               },
               "count": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 10000
+                "maximum": 10000,
+                "description": "Number of copies"
               },
               "step": {
                 "type": "array",
@@ -1653,49 +2164,199 @@
                   "type": "number"
                 },
                 "minItems": 3,
-                "maxItems": 3
+                "maxItems": 3,
+                "description": "Translation between copies",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "rotate": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Rotation between copies, degrees",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
               },
               "fuse": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Union the copies (false just collects them)",
+                "default": true
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
               "op",
               "input",
-              "count",
+              "count"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "3D grid of copies: counts [nx, ny, nz] spaced by step.",
+            "properties": {
+              "op": {
+                "const": "repeat"
+              },
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Solid name"
+              },
+              "counts": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "[nx, ny, nz]"
+              },
+              "step": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "[dx, dy, dz]"
+              },
+              "fuse": {
+                "type": "boolean",
+                "description": "Union the copies",
+                "default": true
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "input",
+              "counts",
               "step"
             ],
             "additionalProperties": false
           },
           {
             "type": "object",
-            "properties": {
-              "op": {
-                "const": "repair"
-              },
-              "input": {
-                "type": "string",
-                "minLength": 1
-              },
-              "fill_holes": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "op",
-              "input"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
+            "description": "Convex hull of one or more solids.",
             "properties": {
               "op": {
                 "const": "hull"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Solid name"
+              },
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "description": "Several solids"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Slice with a plane and keep the side the normal points to; `cap` closes the cut face.",
+            "properties": {
+              "op": {
+                "const": "cut"
+              },
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Solid name"
+              },
+              "origin": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "A point on the plane"
+              },
+              "normal": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Direction of the kept side"
+              },
+              "cap": {
+                "type": "boolean",
+                "description": "Close the cut (needs a solid input)",
+                "default": true
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "input",
+              "origin",
+              "normal"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Merge vertices, drop degenerate and duplicate faces, fix normals, fill simple holes.",
+            "properties": {
+              "op": {
+                "const": "repair"
+              },
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Solid name"
+              },
+              "fill_holes": {
+                "type": "boolean",
+                "description": "Fill small holes",
+                "default": true
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1706,17 +2367,25 @@
           },
           {
             "type": "object",
+            "description": "Reduce the triangle count to about `faces` (quadric decimation; approximate).",
             "properties": {
               "op": {
                 "const": "simplify"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Solid name"
               },
               "faces": {
                 "type": "integer",
-                "minimum": 4
+                "minimum": 4,
+                "description": "Target face count"
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
@@ -1728,13 +2397,519 @@
           },
           {
             "type": "object",
+            "description": "Move a solid so one of its bounding-box anchors meets an anchor of a target solid.",
             "properties": {
               "op": {
-                "const": "cut"
+                "const": "align"
               },
               "input": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Solid to move"
+              },
+              "target": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Solid to align to"
+              },
+              "anchor": {
+                "enum": [
+                  "center",
+                  "left",
+                  "right",
+                  "front",
+                  "back",
+                  "bottom",
+                  "top"
+                ],
+                "description": "Anchor on the moved solid"
+              },
+              "target_anchor": {
+                "enum": [
+                  "center",
+                  "left",
+                  "right",
+                  "front",
+                  "back",
+                  "bottom",
+                  "top"
+                ],
+                "description": "Anchor on the target"
+              },
+              "offset": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Extra translation",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "input",
+              "target"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Drill cylindrical holes into a solid at `positions` (hole centres) along an axis.",
+            "properties": {
+              "op": {
+                "const": "drill"
+              },
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Solid name"
+              },
+              "positions": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "minItems": 1,
+                "description": "Hole centres"
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Hole radius"
+              },
+              "depth": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Cutter length (centred on each position)"
+              },
+              "axis": {
+                "enum": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "description": "Drill direction"
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Sides",
+                "default": 64
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "input",
+              "positions",
+              "radius",
+              "depth"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Flat panel with optional cutouts in the XY, XZ or YZ plane, centred on `center`.",
+            "properties": {
+              "op": {
+                "const": "panel"
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "[width, height] in the panel plane"
+              },
+              "thickness": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Thickness"
+              },
+              "cutouts": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "size"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "rectangle"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "size": {
+                          "type": "array",
+                          "items": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "radius": {
+                          "type": "number",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "radius"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "circle"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "radius": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "size"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "slot"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "size": {
+                          "type": "array",
+                          "items": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "span"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "arch"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "span": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "rise": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "leg": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "segments": {
+                          "type": "integer",
+                          "minimum": 3,
+                          "maximum": 100000
+                        }
+                      }
+                    }
+                  ]
+                },
+                "minItems": 0,
+                "description": "Holes: rectangle, circle, slot or arch shapes",
+                "default": []
+              },
+              "plane": {
+                "enum": [
+                  "xy",
+                  "xz",
+                  "yz"
+                ],
+                "description": "Panel plane"
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Centre",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "radius": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Corner radius",
+                "default": 0
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "size",
+              "thickness"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Wall along X from Z = 0, thickness centred on Y = 0, with optional cutouts in local X/Z.",
+            "properties": {
+              "op": {
+                "const": "wall"
+              },
+              "length": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Length along X"
+              },
+              "height": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Height"
+              },
+              "thickness": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Thickness"
+              },
+              "cutouts": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "size"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "rectangle"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "size": {
+                          "type": "array",
+                          "items": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "radius": {
+                          "type": "number",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "radius"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "circle"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "radius": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "size"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "slot"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "size": {
+                          "type": "array",
+                          "items": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shape",
+                        "span"
+                      ],
+                      "properties": {
+                        "shape": {
+                          "const": "arch"
+                        },
+                        "center": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "rotate": {
+                          "type": "number"
+                        },
+                        "span": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "rise": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "leg": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "segments": {
+                          "type": "integer",
+                          "minimum": 3,
+                          "maximum": 100000
+                        }
+                      }
+                    }
+                  ]
+                },
+                "minItems": 0,
+                "description": "Openings",
+                "default": []
               },
               "origin": {
                 "type": "array",
@@ -1742,30 +2917,216 @@
                   "type": "number"
                 },
                 "minItems": 3,
-                "maxItems": 3
+                "maxItems": 3,
+                "description": "Bottom-centre position",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
               },
-              "normal": {
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "length",
+              "height",
+              "thickness"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Rectangular frame solid; plane XZ by default.",
+            "properties": {
+              "op": {
+                "const": "frame"
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Outer [width, height]"
+              },
+              "border": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Frame width"
+              },
+              "depth": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Thickness"
+              },
+              "plane": {
+                "enum": [
+                  "xy",
+                  "xz",
+                  "yz"
+                ],
+                "description": "Frame plane"
+              },
+              "center": {
                 "type": "array",
                 "items": {
                   "type": "number"
                 },
                 "minItems": 3,
-                "maxItems": 3
+                "maxItems": 3,
+                "description": "Centre",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
               },
-              "cap": {
-                "type": "boolean"
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
               }
             },
             "required": [
               "op",
-              "input",
-              "origin",
-              "normal"
+              "size",
+              "border",
+              "depth"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Arch solid of `depth` (along Y) standing on Z = 0.",
+            "properties": {
+              "op": {
+                "const": "arch"
+              },
+              "span": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Clear width"
+              },
+              "thickness": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Band thickness"
+              },
+              "depth": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Depth along Y"
+              },
+              "rise": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Curve height"
+              },
+              "leg": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Straight leg height",
+                "default": 0
+              },
+              "segments": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100000,
+                "description": "Curve sides",
+                "default": 64
+              },
+              "origin": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Bottom-centre position",
+                "default": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "span",
+              "thickness",
+              "depth"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Rectangular beam from `start` to `end`; `roll` turns its cross-section.",
+            "properties": {
+              "op": {
+                "const": "beam"
+              },
+              "start": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Start point"
+              },
+              "end": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "End point"
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Cross-section [w, h]"
+              },
+              "roll": {
+                "type": "number",
+                "description": "Cross-section rotation in degrees",
+                "default": 0
+              },
+              "note": {
+                "type": "string",
+                "x-cdcad-literal": true,
+                "description": "Free text describing the node (ignored)"
+              }
+            },
+            "required": [
+              "op",
+              "start",
+              "end",
+              "size"
             ],
             "additionalProperties": false
           }
         ]
-      }
+      },
+      "description": "Named solids"
     },
     "exports": {
       "type": "array",
@@ -1790,7 +3151,210 @@
           "path"
         ]
       },
-      "minItems": 1
+      "minItems": 0,
+      "description": "[{solid, path, allow_open?}] files to write; .stl, .3mf, .obj, .ply, .off or .glb"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "solid"
+        ],
+        "properties": {
+          "solid": {
+            "type": "string",
+            "minLength": 1
+          },
+          "volume": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "approx": {
+                "type": "number"
+              },
+              "rel": {
+                "type": "number",
+                "minimum": 0
+              },
+              "abs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "area": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "approx": {
+                "type": "number"
+              },
+              "rel": {
+                "type": "number",
+                "minimum": 0
+              },
+              "abs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "mass": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "approx": {
+                "type": "number"
+              },
+              "rel": {
+                "type": "number",
+                "minimum": 0
+              },
+              "abs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "components": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "approx": {
+                "type": "number"
+              },
+              "rel": {
+                "type": "number",
+                "minimum": 0
+              },
+              "abs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "size_x": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "approx": {
+                "type": "number"
+              },
+              "rel": {
+                "type": "number",
+                "minimum": 0
+              },
+              "abs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "size_y": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "approx": {
+                "type": "number"
+              },
+              "rel": {
+                "type": "number",
+                "minimum": 0
+              },
+              "abs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "size_z": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "approx": {
+                "type": "number"
+              },
+              "rel": {
+                "type": "number",
+                "minimum": 0
+              },
+              "abs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "is_volume": {
+            "type": "boolean"
+          },
+          "fits": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "note": {
+            "type": "string",
+            "x-cdcad-literal": true
+          }
+        }
+      },
+      "minItems": 0,
+      "description": "[{solid, volume|area|mass|components|size_x|size_y|size_z: {min, max} or {approx, rel|abs}, is_volume, fits: [x, y, z]}] assertions; a failing check stops the build before anything is written"
     }
   }
 }

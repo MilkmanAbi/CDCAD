@@ -2,11 +2,11 @@
 import math
 
 import numpy as np
-from shapely import affinity, make_valid
+from shapely import affinity
 from shapely.geometry import Polygon, MultiPolygon, GeometryCollection, LineString, Point, box
 from shapely.ops import unary_union
 
-from ._common import CADError
+from ._common import CADError, suggest
 
 
 def polygonal(geom):
@@ -21,6 +21,14 @@ def polygonal(geom):
     if not polys or sum(p.area for p in polys) <= 1e-12:
         raise CADError("Profile is empty or has zero area")
     return unary_union(polys)
+
+
+def corner_radius(radius, width, height):
+    """Validate a corner radius; within rounding of half the short side it becomes exactly half."""
+    half = min(width, height)/2
+    if radius > half*(1+1e-9)+1e-12:
+        raise CADError(f"Corner radius {radius:g} exceeds half the smaller dimension ({half:g})")
+    return min(radius, half)
 
 
 def polygons(geom):
@@ -60,7 +68,13 @@ def loops_fill(loops, rule="evenodd"):
     return polygonal(unary_union(selected))
 
 
-def svg_path_geometry(path, step=0.5, width=None, rule="evenodd"):
+def svg_path_geometry(path, step=0.5, width=None, rule="evenodd", implicit_close=False):
+    """Sample SVG path data into a filled region (or a stroked one with ``width``).
+
+    With ``implicit_close`` an open subpath is filled as if closed, which is what SVG
+    renderers do for filled shapes; subpaths that enclose no area are skipped. Literal
+    path data keeps the stricter rule, where an open subpath needs Z or a width.
+    """
     from svgelements import Close, Move
     loops, strokes = [], []
     for sub in path.as_subpaths():
@@ -86,9 +100,20 @@ def svg_path_geometry(path, step=0.5, width=None, rule="evenodd"):
             strokes.append(LineString(points).buffer(width / 2, quad_segs=16))
         elif closed or np.allclose(points[0], points[-1], atol=1e-9, rtol=0):
             loops.append(points)
+        elif implicit_close:
+            xy = np.asarray(points, dtype=float)
+            area = 0.5*abs(np.sum(xy[:, 0]*np.roll(xy[:, 1], -1) - np.roll(xy[:, 0], -1)*xy[:, 1]))
+            span = float(np.ptp(xy, axis=0).max())
+            if len(xy) >= 3 and area > max(span*span*1e-12, 1e-18):
+                loops.append(points)
         else:
-            raise CADError("Open SVG path; close it with Z or use a path profile with width")
-    return polygonal(unary_union(strokes)) if width is not None else loops_fill(loops, rule)
+            raise CADError("Open SVG path; close it with Z or give the path profile a stroke width",
+                           hint="an open subpath has no inside to fill; add Z at its end, or set width to stroke it")
+    if width is not None:
+        return polygonal(unary_union(strokes))
+    if not loops and implicit_close:
+        return None
+    return loops_fill(loops, rule)
 
 
 def read_svg(file, node):
@@ -112,9 +137,17 @@ def read_svg(file, node):
         rule = node.get("fill_rule", element.values.get("fill-rule", "nonzero"))
         if rule not in ("evenodd", "nonzero"):
             raise CADError(f"Unsupported SVG fill rule: {rule}")
-        geometries.append(svg_path_geometry(SVGPath(element), node.get("step", .5), rule=rule))
+        geometry = svg_path_geometry(SVGPath(element), node.get("step", .5), rule=rule, implicit_close=True)
+        if geometry is not None:
+            geometries.append(geometry)
     if selected - found:
-        raise CADError(f"SVG filled shape IDs not found: {sorted(selected-found)}")
+        missing = sorted(selected-found)
+        ids = sorted({e.values.get("id") for e in svg.elements() if isinstance(e, Shape) and e.values.get("id")})
+        raise CADError(f"SVG filled shape IDs not found: {missing}",
+                       hint=suggest(missing[0], ids) or (f"filled shape IDs in the file: {ids[:20]}" if ids else
+                                                         "the file has no shapes with an id; ids on groups are not used"))
+    if not geometries:
+        raise CADError("The SVG has no filled shapes with area", hint="strokes and text are not imported; convert them to filled paths")
     geom = polygonal(unary_union(geometries))
     if node.get("flip_y", True):
         geom = affinity.scale(geom, yfact=-1, origin=(0, 0))
@@ -126,11 +159,11 @@ def read_dxf(file, node):
     from ezdxf.path import make_path
     from shapely.ops import polygonize_full
     doc = ezdxf.readfile(str(file))
-    layer_filter = set(node.get("layers", []))
+    layer_filter = {layer.casefold() for layer in node.get("layers", [])}  # DXF layer names ignore case
     lines = []
     allowed = {"LWPOLYLINE", "POLYLINE", "LINE", "ARC", "CIRCLE", "ELLIPSE", "SPLINE"}
     for entity in doc.modelspace():
-        if layer_filter and entity.dxf.layer not in layer_filter:
+        if layer_filter and entity.dxf.layer.casefold() not in layer_filter:
             continue
         if entity.dxftype() not in allowed:
             raise CADError(f"Unsupported DXF entity {entity.dxftype()}; select contour layers or explode it first")
@@ -141,7 +174,8 @@ def read_dxf(file, node):
             raise CADError("DXF must lie in the XY plane at Z=0")
         lines.append(LineString(pts[:, :2]))
     if not lines:
-        raise CADError("No supported DXF contours in selected layers")
+        layers = sorted({entity.dxf.layer for entity in doc.modelspace()})
+        raise CADError("No supported DXF contours in selected layers", hint=f"layers with entities: {layers[:30]}")
     # polygonize accepts line chains; reject dangling/open geometry instead of losing it.
     result, cuts, dangles, invalid = polygonize_full(unary_union(lines))
     if any(not g.is_empty for g in (cuts, dangles, invalid)):
@@ -196,9 +230,7 @@ def panel_cutouts(geom, cutouts):
             if "size" not in cut:
                 raise CADError("Rectangle cutout requires size")
             w, h = cut["size"]
-            r = cut.get("radius", 0)
-            if r > min(w, h)/2:
-                raise CADError("Cutout radius is too large")
+            r = corner_radius(cut.get("radius", 0), w, h)
             hole = slot_profile([w, h]) if r == min(w, h)/2 else box(-w/2+r, -h/2+r, w/2-r, h/2-r).buffer(r) if r else box(-w/2, -h/2, w/2, h/2)
         elif shape == "circle":
             if "radius" not in cut:

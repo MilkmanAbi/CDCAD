@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "A compression spring: a round wire swept along a helix. The up frame keeps the wire's cross-section square to the coil axis.",
+  "params": {"coils": 6, "pitch": 5, "radius": 10, "wire": 1.5},
+  "profiles": {"wire": {"op": "circle", "radius": "=wire/2", "segments": 32}},
+  "solids": {
+    "spring": {"op": "sweep", "profile": "wire", "frame": "up",
+               "curve": {"x": "radius*cos(t)", "y": "radius*sin(t)", "z": "pitch*t/tau",
+                         "t": [0, "=coils*tau"], "samples": "=coils*96"}}
+  },
+  "exports": [{"solid": "spring", "path": "spring.stl"}],
+  "checks": [{"solid": "spring", "size_z": {"approx": "=coils*pitch + wire", "rel": 0.01}, "components": {"approx": 1}}]
+}

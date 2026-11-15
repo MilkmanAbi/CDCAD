@@ -1,5 +1,15 @@
 # Cross-platform verification
 
+## CDCAD 0.5.0 (local runs, 2026-11-15)
+
+- Windows x64, CPython 3.13.14, dependencies pinned by `requirements-tested.txt`: 286 passed, 1 skipped (the POSIX file-mode test) in about two minutes. New suites cover the regressions fixed in 0.5.0, the expression language, every new operation against analytic volumes, every catalog example, every example recipe and its checks, rendering, `describe`/`guide`, the Python builder, the MCP server (scripted JSON-RPC sessions) and the snippets in README, REFERENCE, PROJECTS and SCRIPTING.
+- A wheel built with `pip wheel .` contains the bundled font and both licence files, and declares `License-Expression: GPL-3.0-only`. Installed with `--no-deps` into a fresh virtualenv beside the pinned dependencies, it ran `--version`, a text extrusion with the bundled font exported as 3MF, a render of that 3MF and `capabilities` from a directory outside the source tree.
+- `project build --format 3mf` on the arch demo wrote five closed 3MF solids.
+- All 3.11-incompatible f-string forms were searched for with a token scan (none found); Python 3.11 itself was not run locally. CI runs 3.11 and 3.13 on Linux, macOS and Windows.
+- Not run: macOS and Linux locally, the dependency lower bounds in `pyproject.toml`, and the MCP server inside a real MCP client (it was exercised with scripted JSON-RPC only).
+
+## Earlier runs
+
 - Windows x64 with CPython 3.13.14: 62 tests passed.
 - Ubuntu 24.04 x64 under WSL, on the Linux filesystem with CPython 3.12.3: 62 tests passed. The installed CLI generated and inspected a solid box from outside the source tree.
 - macOS Apple Silicon and Intel are configured in the CI matrix. They had not run when this was written; see the 2026-11-14 entry below for the first run.
@@ -35,7 +45,7 @@ python -m pytest tests -q
 
 The 24 additional test cases cover arch dimensions (including odd curve sampling counts), wall/panel cutouts in all planes, frames, oriented beams, drilling, 2D grids, 3D repeats, expression-derived integer counts, required cutout properties, content-cache reuse across renamed subgraphs, project creation/duplication/placement/fusion, unchanged rebuilds and source edits, layer selection, dynamic assembly membership, output tampering, revision conflicts, batch patch failure isolation, array-index assignment, attachment propagation/cycles, source-path protection, locks, removal and recovery, flattened recipe equivalence, CLI primitives, imported recipe asset paths, and persistent-worker error/stdin isolation.
 
-The complete package contains **17 saved STL files**, including the original nine, three structural examples and five outputs from the editable arch project. Every file was reloaded from disk and checked as a watertight, consistently wound positive volume. See `samples/all-stl-verification.json`.
+The complete package contained **17 saved STL files** at the time, including the original nine, three structural examples and five outputs from the editable arch project (those five are generated into the project's ignored `build/` folder and are not in the repository). Every file was reloaded from disk and checked as a watertight, consistently wound positive volume. See `samples/all-stl-verification.json`.
 
 The arch demo's measured in-process build was 0.334 seconds for five outputs. An unchanged build took 0.173 seconds with **zero geometry evaluations and zero model output writes**. Changing only the arch span rebuilt the arch and fused assembly while retaining the other three outputs (0.235 seconds). See `samples/project-benchmark.json`. These are illustrative local measurements, exclude interpreter startup/imports, and are not performance guarantees. The persistent worker example was also run successfully through init, build, edit, rebuild and unchanged rebuild.
 

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "A 30 mm block of sheet gyroid, the triply periodic minimal surface used for lightweight infill. Inside is where the field is within t of zero.",
+  "params": {"cell": 10, "t": 0.35, "size": 30},
+  "solids": {
+    "gyroid": {"op": "implicit",
+               "f": "abs(sin(tau*x/cell)*cos(tau*y/cell) + sin(tau*y/cell)*cos(tau*z/cell) + sin(tau*z/cell)*cos(tau*x/cell)) - t",
+               "bounds": [[0, 0, 0], ["=size", "=size", "=size"]], "resolution": 0.5}
+  },
+  "exports": [{"solid": "gyroid", "path": "gyroid.stl"}],
+  "checks": [{"solid": "gyroid", "volume": {"min": 3000, "max": 12000}, "components": {"approx": 1}}]
+}

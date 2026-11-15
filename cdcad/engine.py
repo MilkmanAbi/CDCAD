@@ -16,9 +16,10 @@ from shapely.ops import unary_union
 
 from ._common import CADError, UNITS, atomic_bytes, dependency_versions, document_path
 from ._profiles import (
-    arch_opening, arch_profile, frame_profile, panel_cutouts, polygonal, polygons,
+    arch_opening, arch_profile, corner_radius, frame_profile, panel_cutouts, polygonal,
     read_dxf, read_svg, slot_profile, svg_path_geometry,
 )
+from . import generate
 from .graph import validate_graph
 from .mesh import (
     boolean, bounds_anchor, clean_mesh, cut_mesh, heightfield, load_mesh,
@@ -28,10 +29,15 @@ from .mesh import (
 
 @functools.lru_cache(maxsize=1)
 def geometry_cache_salt():
-    sources = Path(__file__).parent
-    code = {name: hashlib.sha256((sources/name).read_bytes()).hexdigest()
-            for name in ("engine.py", "_profiles.py", "mesh.py", "_common.py")}
-    return {"code": code, "versions": dependency_versions(), "platform": [platform.system(), platform.machine()]}
+    """Everything besides the recipe that can change geometry: the package's own code and
+    bundled data, dependency versions and the platform."""
+    package = Path(__file__).parent
+    digest = hashlib.sha256()
+    for file in sorted(package.rglob("*")):
+        if file.is_file() and file.suffix in (".py", ".ttf", ".otf") and "__pycache__" not in file.parts:
+            digest.update(file.relative_to(package).as_posix().encode() + b"\0" + file.read_bytes())
+    return {"code": digest.hexdigest(), "versions": dependency_versions(),
+            "platform": [platform.system(), platform.machine()]}
 
 
 class Engine:
@@ -41,9 +47,11 @@ class Engine:
         self.unit = recipe.get("units", "mm")
         self.cache_dir = Path(cache_dir).resolve() if cache_dir else None
         self.keys, self.file_hashes = {}, {}
-        if self.cache_dir:
-            self.cache_salt = geometry_cache_salt()
         validate_graph(recipe)
+
+    @property
+    def cache_salt(self):
+        return geometry_cache_salt()
 
     def source(self, value):
         return (self.base / document_path(value)).resolve()
@@ -87,7 +95,7 @@ class Engine:
                         data = buffer.getvalue()
                     atomic_bytes(cache_file, data)
         except Exception as exc:
-            raise CADError(f"{kind}/{name} ({node['op']}): {exc}") from exc
+            raise CADError(f"{kind}/{name} ({node['op']}): {exc}", hint=getattr(exc, "hint", None)) from exc
         self.memo[key] = value
         if content_key:
             self.content_memo[content_key] = value
@@ -101,6 +109,7 @@ class Engine:
             return self.keys[key]
         node = self.recipe[kind][name]
         normalized = dict(node)
+        normalized.pop("note", None)  # notes describe a node; they never change its geometry
         for field in ("input", "target"):
             if field in node:
                 normalized[field] = self.node_key(kind, node[field])
@@ -113,6 +122,8 @@ class Engine:
         content = {"kind": kind, "node": normalized, "units": self.unit, "runtime": self.cache_salt}
         if "path" in node:
             path = self.source(node["path"])
+            if not path.is_file():
+                raise CADError(f"{kind}/{name}: source file not found: {node['path']} (looked for {path})")
             if path not in self.file_hashes:
                 with path.open("rb") as f:
                     self.file_hashes[path] = hashlib.file_digest(f, "sha256").hexdigest()
@@ -122,6 +133,13 @@ class Engine:
         result = hashlib.sha256(json.dumps(content, sort_keys=True).encode()).hexdigest()
         self.keys[key] = result
         return result
+
+    @staticmethod
+    def refs(n):
+        """The node's input or inputs (for operations that take either)."""
+        if ("input" in n) == ("inputs" in n):
+            raise CADError(f"{n['op']} needs exactly one of input or inputs")
+        return [n["input"]] if "input" in n else n["inputs"]
 
     def profile(self, n):
         op = n["op"]
@@ -143,9 +161,7 @@ class Engine:
         elif op == "rectangle":
             w, h = n["size"]
             cx, cy = n.get("center", [0, 0])
-            r = n.get("radius", 0)
-            if r > min(w, h)/2:
-                raise CADError("Corner radius exceeds half the smaller dimension")
+            r = corner_radius(n.get("radius", 0), w, h)
             if r:
                 geom = box(cx-w/2+r, cy-h/2+r, cx+w/2-r, cy+h/2-r).buffer(r, quad_segs=16)
                 # A zero-width inset box degenerates; use a line or point instead.
@@ -186,6 +202,18 @@ class Engine:
                     geom = getattr(geom, op)(shape)
         elif op == "offset":
             geom = get(n["input"]).buffer(n["distance"], join_style=n.get("join", "round"), quad_segs=16)
+        elif op == "function":
+            geom = generate.function_profile(n)
+        elif op == "curve":
+            geom = generate.curve_profile(n)
+        elif op == "regular_polygon":
+            geom = generate.regular_polygon(n)
+        elif op == "text":
+            geom = generate.text_profile(n, self.source(n["path"]) if "path" in n else None)
+        elif op == "array":
+            geom = generate.profile_array(get(n["input"]), n)
+        elif op == "hull":
+            geom = unary_union([get(ref) for ref in self.refs(n)]).convex_hull
         elif op == "transform":
             geom = get(n["input"])
             sx, sy = n.get("scale", [1, 1])
@@ -252,19 +280,30 @@ class Engine:
                 meshes.append(part)
             mesh = boolean("union", meshes) if n.get("fuse", True) else trimesh.util.concatenate(meshes)
         elif op == "extrude":
-            geom = self.get("profiles", n["profile"])
-            meshes = [trimesh.creation.extrude_polygon(p, n["height"], engine="earcut") for p in polygons(geom)]
-            mesh = trimesh.util.concatenate(meshes)
-            mesh.apply_translation([0, 0, n.get("z", 0)])
+            mesh = generate.extrude(self.get("profiles", n["profile"]), n)
+        elif op == "sweep":
+            mesh = generate.sweep(self.get("profiles", n["profile"]), n)
+        elif op == "implicit":
+            mesh = generate.implicit(n)
+        elif op == "graph":
+            mesh = generate.graph(n)
+        elif op == "polyhedron":
+            mesh = generate.polyhedron(n)
+        elif op == "cone":
+            mesh = generate.cone(n)
+        elif op == "torus":
+            mesh = generate.torus(n)
+        elif op == "mirror":
+            source = get(n["input"])
+            mesh = source.copy()
+            mesh.apply_transform(generate.mirror_matrix(n.get("normal", [1, 0, 0]), n.get("origin", [0, 0, 0])))
+            if n.get("keep", False):
+                mesh = boolean("union", [source, mesh])
         elif op == "loft":
             mesh = loft([self.get("profiles", s["profile"]) for s in n["sections"]],
                         [s["z"] for s in n["sections"]], n.get("samples", 96))
         elif op == "revolve":
-            geom = self.get("profiles", n["profile"])
-            if not isinstance(geom, Polygon) or len(geom.interiors) or geom.bounds[0] < 0:
-                raise CADError("Revolve profile must be one hole-free polygon with X >= 0 (X=radius, Y=Z)")
-            from shapely.geometry.polygon import orient
-            mesh = trimesh.creation.revolve(np.asarray(orient(geom, sign=1).exterior.coords), sections=n.get("segments", 96))
+            mesh = generate.revolve(self.get("profiles", n["profile"]), n)
         elif op == "box":
             mesh = trimesh.creation.box(n["size"])
         elif op == "cylinder":
@@ -286,15 +325,20 @@ class Engine:
         elif op == "array":
             source = get(n["input"])
             meshes = []
+            step = np.asarray(n.get("step", [0, 0, 0]), dtype=float)
+            rotate = np.radians(n.get("rotate", [0, 0, 0]))
             for i in range(n["count"]):
                 m = source.copy()
-                m.apply_translation(np.asarray(n["step"])*i)
+                if rotate.any():
+                    m.apply_transform(trimesh.transformations.euler_matrix(*(rotate*i), axes="sxyz"))
+                m.apply_translation(step*i)
                 meshes.append(m)
             mesh = boolean("union", meshes) if n.get("fuse", True) else trimesh.util.concatenate(meshes)
         elif op == "repair":
             mesh = clean_mesh(get(n["input"]), n.get("fill_holes", True))
         elif op == "hull":
-            mesh = get(n["input"]).convex_hull
+            meshes = [get(ref) for ref in self.refs(n)]
+            mesh = (meshes[0] if len(meshes) == 1 else trimesh.util.concatenate(meshes)).convex_hull
         elif op == "simplify":
             source = get(n["input"])
             mesh = source.copy() if n["faces"] >= len(source.faces) else source.simplify_quadric_decimation(face_count=n["faces"])

@@ -45,7 +45,17 @@ def project_build(root, *, segments=(), assemblies=(), layers=(), overrides=None
             raise CADError("Use build/ or a separate output directory, not project source/metadata folders")
         engine = Engine(recipe, root, cache_dir=root/METADATA_DIR/"cache")
         state_path = root/METADATA_DIR/"build-state.json"
-        previous = read_json(state_path) if state_path.exists() else {"outputs": {}}
+        warnings = []
+        previous = {"outputs": {}}
+        if state_path.exists():
+            try:
+                previous = read_json(state_path)
+                if not isinstance(previous, dict) or not isinstance(previous.get("outputs", {}), dict):
+                    raise CADError("unexpected structure")
+            except CADError:
+                # Build state only lets unchanged outputs be skipped; losing it means a full rebuild.
+                previous = {"outputs": {}}
+                warnings.append(f"{METADATA_DIR}/build-state.json was unreadable; rebuilding every selected output")
         next_outputs = dict(previous.get("outputs", {}))
         jobs, outputs, pending = [], [], []
         for name, entry in selection.items():
@@ -59,13 +69,14 @@ def project_build(root, *, segments=(), assemblies=(), layers=(), overrides=None
                           "mm_factor": UNITS[recipe["units"]]})
             old = previous.get("outputs", {}).get(str(path))
             status = "build"
-            if not rebuild and old and old.get("key") == key and path.is_file():
+            if not rebuild and isinstance(old, dict) and old.get("key") == key and isinstance(old.get("sha256"), str) and path.is_file():
                 with path.open("rb") as f:
                     if hashlib.file_digest(f, "sha256").hexdigest() == old["sha256"]:
                         status = "unchanged"
             jobs.append({"name": name, **entry, "path": str(path), "key": key, "status": status})
         if plan:
             return {"ok": True, "plan": True, "revision": revision(state), "units": "mm", "outputs": jobs,
+                    "warnings": warnings,
                     "note": "Geometry not evaluated. Source-file bytes and output hashes checked."}
         for job in jobs:
             path = Path(job["path"])
@@ -83,7 +94,7 @@ def project_build(root, *, segments=(), assemblies=(), layers=(), overrides=None
             atomic_bytes(path, data)
         report = {"ok": True, "version": VERSION, "revision": revision(state), "units": "mm",
                   "parameters": params, "outputs": outputs, "trace": engine.trace,
-                  "built": len(pending), "unchanged": len(outputs)-len(pending),
+                  "built": len(pending), "unchanged": len(outputs)-len(pending), "warnings": warnings,
                   "seconds": round(time.perf_counter()-started, 6)}
         atomic_bytes(state_path, json_bytes({"outputs": next_outputs}))
         atomic_bytes(root/METADATA_DIR/"last-build.json", json_bytes(report))

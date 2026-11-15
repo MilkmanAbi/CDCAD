@@ -76,7 +76,7 @@ cdcad project stitch fixture fixture-body --members deck entry --mode union
 cdcad project build fixture
 ```
 
-`put --spec` wraps one solid operation in a recipe named `part`. For profiles or a longer operation chain, use `--file segment.json`. A project segment file may omit `exports`; the manifest's `solid` selects its output (default `part`). Segments support all recipe operations, including SVG/DXF extrusion and imported STL edits. References inside a segment are local; cross-segment assemblies and attachments belong in `project.json`.
+`put --spec` wraps one solid operation in a recipe named `part`. For profiles or a longer operation chain, use `--file segment.json`. A project segment file may omit `exports`; the manifest's `solid` selects its output (default `part`). Segments support all recipe operations, including SVG/DXF extrusion, imported mesh edits, sweeps, implicit fields and text. References inside a segment are local; cross-segment assemblies and attachments belong in `project.json`. A segment document's own `checks` and `density` are validated but not carried into project builds; put such assertions in a standalone recipe or check the built files with `cdcad inspect`.
 
 ```powershell
 cdcad project put fixture wall --file wall.json --solid part --layer structure
@@ -116,7 +116,7 @@ cdcad project build my-demo --assembly demo --format glb
 
 Selectors repeat and combine by union. A layer selector exports its enabled segments, not assemblies using that layer. An assembly selector evaluates dependencies but exports only that assembly. Layer-based assemblies collect enabled members dynamically; empty assemblies are excluded. An attachment to a disabled target is rejected. Disabled source documents are still checked for schema and local reference errors.
 
-Default builds export every enabled segment and nonempty enabled assembly, replacing managed outputs as needed. `--out-dir` changes the build location; it cannot target the project root, segments, assets or metadata. Project formats: STL, GLB, OBJ, PLY. All coordinates, including GLB, are millimeters; viewers assuming meter-based glTF units need scale adjustment.
+Default builds export every enabled segment and nonempty enabled assembly, replacing managed outputs as needed. `--out-dir` changes the build location; it cannot target the project root, segments, assets or metadata. Project formats: STL, 3MF, OBJ, PLY, OFF and GLB (`--format`). All coordinates, including GLB, are millimeters; viewers assuming meter-based glTF units need scale adjustment. 3MF records the unit, so slicers import it at the right size.
 
 Old output files remain when a part is disabled, removed, renamed or built in another format. They are derived artifacts; the source manifest and latest report define active outputs. A partial build's latest report covers its selection. The builder never silently cleans a directory or deletes source files.
 
@@ -194,6 +194,7 @@ YZ panels map width→Y, height→Z, normal→+X. XZ panels map width→X, heigh
 ```powershell
 cdcad project compile my-demo --set span=72 -o compiled.json
 cdcad build compiled.json --out-dir exported
+cdcad render compiled.json --solid @demo -o demo.png
 ```
 
-The result is a regular namespaced recipe with placement, attachment and assembly graph nodes. External asset paths in compiled recipes are absolute. Existing mesh inspection, conversion and editing commands remain available.
+The result is a regular namespaced recipe with placement, attachment and assembly graph nodes: segment `arch` becomes solid `@arch`, and its local nodes are `arch::name`. External asset paths in compiled recipes are absolute, and field expressions carry their parameter values. `compile` refuses to replace an existing file unless you pass `--force`. Existing mesh inspection, conversion, rendering and editing commands remain available.

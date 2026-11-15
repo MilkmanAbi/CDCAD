@@ -20,13 +20,17 @@ def register(s):
         "beam": "Rectangular beam between XYZ endpoints",
         "box": "Box centered on the origin",
         "cylinder": "Cylinder centered on the origin, along Z",
+        "cone": "Cone or frustum centered on the origin, along Z",
         "sphere": "Sphere centered on the origin",
+        "torus": "Torus around the Z axis, centered on the origin",
     }
     for op, description in descriptions.items():
         shape = shapes.add_parser(op, help=description, description=description)
         required, props = SOLID_OPS[op]
         for key, rule in props.items():
-            settings = {"required": key in required, "default": argparse.SUPPRESS}
+            if key == "note":
+                continue
+            settings = {"required": key in required, "default": argparse.SUPPRESS, "help": rule.get("description")}
             if rule.get("type") == "array" and rule.get("minItems") == rule.get("maxItems") and rule.get("items", {}).get("type") == "number":
                 settings.update(nargs=rule["minItems"], type=float, metavar=("X", "Y", "Z")[:rule["minItems"]])
             elif rule.get("type") == "number":

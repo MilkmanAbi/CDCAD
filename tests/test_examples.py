@@ -41,3 +41,22 @@ def test_design_sweep_checks_its_own_volumes(tmp_path):
     result = run_example("design-sweep.py", tmp_path)
     assert result.returncode == 0, result.stderr
     assert result.stdout.count("mm^3") == 3
+
+
+RECIPES = sorted(p.name for p in (ROOT/"examples").glob("*.json"))
+
+
+@pytest.mark.parametrize("name", RECIPES)
+def test_every_example_recipe_builds_and_passes_its_checks(tmp_path, name):
+    import cdcad
+    recipe = cdcad.read_recipe(ROOT/"examples"/name)
+    report = cdcad.build_recipe(recipe, ROOT/"examples", tmp_path)
+    assert all(export["is_volume"] for export in report["exports"] if not export["path"].endswith("path-track.stl"))
+    assert all(check["ok"] for check in report.get("checks", []))
+
+
+def test_wheel_builder_example(tmp_path):
+    result = run_example("wheel.py", tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.count("solid=True") == 3
+    assert (tmp_path/"wheel-5.png").is_file()

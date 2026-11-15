@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "description": "A desk nameplate: rounded plate, two countersunk-free mounting holes and engraved text. density makes the report give the mass in grams.",
+  "params": {"width": 90, "height": 26, "thickness": 4, "depth": 1.2, "hole": 1.8},
+  "density": 1.24,
+  "profiles": {
+    "plate": {"op": "rectangle", "size": ["=width", "=height"], "radius": 4},
+    "holes": {"op": "array", "input": "hole", "count": 2, "step": ["=width - 10", 0]},
+    "hole": {"op": "circle", "radius": "=hole", "center": ["=-width/2 + 5", 0]},
+    "label": {"op": "text", "text": "CDCAD 0.5", "size": 9, "halign": "center", "valign": "center"}
+  },
+  "solids": {
+    "slab": {"op": "extrude", "profile": "plate", "height": "=thickness"},
+    "drills": {"op": "extrude", "profile": "holes", "height": "=thickness + 2", "z": -1},
+    "letters": {"op": "extrude", "profile": "label", "height": "=depth + 1", "z": "=thickness - depth"},
+    "nameplate": {"op": "difference", "inputs": ["slab", "drills", "letters"]}
+  },
+  "exports": [{"solid": "nameplate", "path": "nameplate.3mf"}],
+  "checks": [{"solid": "nameplate", "mass": {"min": 5, "max": 15}, "components": {"approx": 1}}]
+}

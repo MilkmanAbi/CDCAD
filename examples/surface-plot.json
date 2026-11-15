@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "A printable plot of z = sin(r)/r, the sinc ripple, over a 60 mm square. The conditional avoids dividing by zero at the centre.",
+  "params": {"span": 60, "scale": 0.5, "lift": 4, "amp": 10},
+  "solids": {
+    "plot": {"op": "graph",
+             "f": "lift + amp*(sin(scale*hypot(x, y))/(scale*hypot(x, y)) if hypot(x, y) > 1e-9 else 1)",
+             "x": ["=-span/2", "=span/2"], "y": ["=-span/2", "=span/2"], "samples": [241, 241]}
+  },
+  "exports": [{"solid": "plot", "path": "surface-plot.stl"}],
+  "checks": [{"solid": "plot", "size_z": {"approx": "=lift + amp", "rel": 0.01}}]
+}

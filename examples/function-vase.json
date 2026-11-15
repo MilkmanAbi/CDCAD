@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "description": "The vase from vase.py without Python: the wall radius is a formula of height, turned with revolve, and the inside is the same formula minus the wall.",
+  "params": {"height": 90, "wall": 2, "floor": 3},
+  "profiles": {
+    "outside": {"op": "function", "var": "y", "f": "18 + 6*sin(y/12) + 4*sin(y/5)", "range": [0, "=height"], "samples": 240},
+    "inside": {"op": "function", "var": "y", "f": "18 + 6*sin(y/12) + 4*sin(y/5) - wall", "range": ["=floor", "=height + 1"], "samples": 240}
+  },
+  "solids": {
+    "body": {"op": "revolve", "profile": "outside"},
+    "cavity": {"op": "revolve", "profile": "inside"},
+    "vase": {"op": "difference", "inputs": ["body", "cavity"]}
+  },
+  "exports": [{"solid": "vase", "path": "function-vase.stl"}],
+  "checks": [{"solid": "vase", "size_z": {"approx": "=height"}, "volume": {"min": 20000, "max": 26000}}]
+}

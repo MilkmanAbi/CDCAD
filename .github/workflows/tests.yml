@@ -25,3 +25,6 @@ jobs:
           cdcad --version
           cdcad make box --size 2 3 4 -o smoke.stl
           cdcad inspect smoke.stl --require-solid
+          cdcad make torus --major 10 --minor 3 -o smoke.3mf
+          cdcad render smoke.3mf -o smoke.png --size 256
+          cdcad describe text

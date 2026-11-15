@@ -1,5 +1,5 @@
 """Dependency traversal shared by validation and geometry evaluation."""
-from ._common import CADError
+from ._common import CADError, suggest
 
 
 def dependencies(kind, node):
@@ -23,7 +23,10 @@ def validate_graph(recipe):
         if key in active:
             raise CADError(f"Cyclic reference at {kind}/{name}")
         if name not in recipe.get(kind, {}):
-            raise CADError(f"Unknown reference: {kind}/{name}")
+            other = "solids" if kind == "profiles" else "profiles"
+            hint = (f"{name!r} is one of the {other}; {kind} can only refer to {kind}"
+                    if name in recipe.get(other, {}) else suggest(name, recipe.get(kind, {})))
+            raise CADError(f"Unknown reference: {kind}/{name}", hint=hint)
         active.add(key)
         for dep in dependencies(kind, recipe[kind][name]):
             visit(*dep)
@@ -34,3 +37,5 @@ def validate_graph(recipe):
             visit(kind, name)
     for exp in recipe["exports"]:
         visit("solids", exp["solid"])
+    for check in recipe.get("checks", []):
+        visit("solids", check["solid"])

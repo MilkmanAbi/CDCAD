@@ -14,6 +14,8 @@ def register(s):
     i.add_argument("--bed", nargs=3, type=float, metavar=("X", "Y", "Z"),
                    help="Build volume in mm; reports whether the part fits as modeled and in any axis-aligned orientation")
     i.add_argument("--require-fit", action="store_true", help="With --bed, fail unless the part fits in some axis-aligned orientation")
+    i.add_argument("--density", type=float, metavar="G_PER_CM3",
+                   help="Material density in g/cm^3 (PLA about 1.24, PETG 1.27, ABS 1.04); adds mass_g")
     edit = s.add_parser("edit", help="Transform/repair/cut/simplify an existing mesh in that order")
     edit.set_defaults(handler=edit_mesh)
     edit.add_argument("input")
@@ -62,10 +64,12 @@ def inspect(args):
 
     if args.require_fit and not args.bed:
         raise CADError("--require-fit needs --bed")
+    if args.density is not None and not args.density > 0:
+        raise CADError("--density must be positive (g/cm^3)")
     mesh = load_mesh(Path(args.input))
     if args.require_solid:
         valid_mesh(mesh)
-    report = {"ok": True, "units": "mm", **mesh_report(mesh)}
+    report = {"ok": True, "units": "mm", **mesh_report(mesh, args.density)}
     if args.bed:
         report["bed_fit"] = bed_fit(report["extents"], args.bed)
         if args.require_fit and not report["bed_fit"]["fits_any_orientation"]:
@@ -118,11 +122,46 @@ def edit_mesh(args):
     return single_export(mesh, args)
 
 
+def winding_number(mesh, point):
+    """Generalized winding number of a closed mesh around a point: about 1 inside, 0 outside.
+    Sums the triangles' signed solid angles (Van Oosterom and Strackee, 1983)."""
+    import numpy as np
+
+    a, b, c = (mesh.triangles - np.asarray(point, dtype=float)).transpose(1, 0, 2)
+    la, lb, lc = (np.linalg.norm(v, axis=1) for v in (a, b, c))
+    numerator = np.einsum("ij,ij->i", a, np.cross(b, c))
+    denominator = (la*lb*lc + np.einsum("ij,ij->i", a, b)*lc + np.einsum("ij,ij->i", b, c)*la
+                   + np.einsum("ij,ij->i", c, a)*lb)
+    return float(np.sum(2*np.arctan2(numerator, denominator))/(4*np.pi))
+
+
+def solid_bodies(mesh):
+    """Connected shells grouped into bodies: an inward-facing shell (a void) stays with the
+    smallest outward-facing shell that contains it, so a hollow part splits as one body."""
+    import numpy as np
+    import trimesh
+
+    shells = mesh.split(only_watertight=False)
+    outer = [s for s in shells if not (s.is_watertight and s.volume < 0)]
+    voids = [s for s in shells if s.is_watertight and s.volume < 0]
+    members = {i: [shell] for i, shell in enumerate(outer)}
+    for void in voids:
+        probe = void.vertices[:1]
+        hosts = [i for i, shell in enumerate(outer) if shell.is_watertight and shell.volume > 0
+                 and winding_number(shell, probe[0]) > 0.5]
+        if hosts:
+            members[min(hosts, key=lambda i: outer[i].volume)].append(void)
+        else:
+            members[len(members)] = [void]
+            outer.append(void)
+    bodies = [trimesh.util.concatenate(group) for group in members.values()]
+    return sorted(bodies, key=lambda m: (-abs(m.volume), *np.round(m.centroid, 9)))
+
+
 def split_mesh(args):
     from ..mesh import export_bytes, load_mesh
 
-    parts = load_mesh(Path(args.input)).split(only_watertight=False)
-    parts = sorted(parts, key=lambda m: (-abs(m.volume), *m.centroid))
+    parts = solid_bodies(load_mesh(Path(args.input)))
     pending = []
     for i, part in enumerate(parts):
         path = Path(args.out_dir).resolve()/f"part_{i:03d}.stl"

@@ -1,3 +1,41 @@
+# 0.5.0
+
+Changes that can alter existing results:
+
+- Image heightfields were mirrored top to bottom: the picture's top row landed at Y=0. Pictures now keep the orientation you see on screen (top row at the high-Y edge), like SVG import. `.npy` arrays keep row 0 at Y=0 (numpy's meshgrid convention). The new `flip_y` overrides either. `samples/relief.stl` is rebuilt.
+- 16-bit PNG heightmaps were clipped to two levels; they now keep their precision, and 32-bit float images are read as values in [0, 1].
+- A filled SVG path or polyline without a closing Z is filled as SVG viewers fill it, instead of being rejected; filled subpaths with no area are skipped. Literal `path` data still needs Z or a stroke width.
+- DXF layer selection ignores case, as DXF does.
+- `text`, `d`, SVG `ids`, DXF `layers` and notes are never evaluated as expressions, even when they start with `=`.
+- `project compile` refuses to replace an existing file unless you pass `--force`.
+
+Fixes:
+
+- 3MF input failed with "No module named 'lxml'". 3MF is now read and written with the standard library: units, components, build-item transforms and production-extension parts are read; output is a millimetre 3MF that slicers import at the right size.
+- `split` of a hollow solid failed; a void now stays with the body that contains it.
+- `project history` could mark two entries as current after a restore; only the newest one is.
+- A missing segment file, a corrupt `build-state.json` (now a warning and a full rebuild), an unreadable or malformed JSON file, and `Engine.node_key` without a cache directory raised raw Python errors; they are `CADError`s with a clear message.
+- A corner radius computed as exactly half a side could fail by a rounding error.
+- Heightfield faces are built with numpy instead of Python loops: a 512 x 512 field took 5.1 s and now takes 3.0 s on the development machine; most of the rest is the closed-solid check every mesh gets.
+- The disk cache key covers every module of the package and the bundled font, so any code change invalidates old cache entries.
+- Package metadata declares the licence (GPL-3.0-only, with the DejaVu font licence) and `fonttools`.
+
+New:
+
+- Maths-driven operations: `function` (area under or beside a formula), `curve` (closed parametric outline), `graph` (solid under z = f(x, y)), `implicit` (solid where f(x, y, z) < 0, meshed with Manifold's level set; gyroids, blobs), `sweep` (a profile along a 3D path or parametric curve, with rotation-minimising or up-vector frames, twist, scale and closed loops).
+- `extrude` gains `twist`, `scale` and `slices`; `revolve` gains `angle` for partial turns.
+- New shapes: `regular_polygon` (radius or across-flats), `text` (bundled DejaVu Sans subset, or any TrueType/OpenType file), `cone` (and frustum), `torus`, `polyhedron` (faces, or the hull of points). New modifiers: `mirror`, profile `array` and `hull`, `rotate` on solid `array` (polar patterns), `hull` of several inputs.
+- Expressions: `atan2`, `asin`, `acos`, `atan`, `sinh`, `cosh`, `tanh`, `exp`, `log`, `log10`, `log2`, `cbrt`, `hypot`, `pow`, `sign`, `clamp`, `lerp`, `smoothstep`, `smin`, `smax`, the constant `e`, `//`, comparisons, `a if c else b` and `and`/`or`/`not`. Parameters resolve in dependency order with clear messages for unknown names and cycles. `^` is rejected with a hint to use `**`.
+- Field expressions (formulas of x, y, z or t) may use parameters, which are written into them when the recipe is resolved.
+- Recipe `checks` (volume, area, mass, components, size, is_volume, bed fit) stop a build before anything is written; recipe `density` adds `mass_g` to reports; reports include the centre of mass. Top-level `description` and per-node `note` document a recipe.
+- `cdcad render` draws PNG previews of mesh files or recipe solids (iso, front, top, right, or one view) without OpenGL.
+- `cdcad describe` and `cdcad guide` document every operation and property from the code, with examples that the tests build. The JSON Schema carries descriptions and defaults.
+- Errors carry a `hint` ("Did you mean 'cylinder'?", "circle is a profile operation", "write powers with **"); `validate` and `build` report `warnings` for unused parameters and unreachable nodes.
+- `cdcad.Recipe`: a Python builder with operators (`a - b`), parameter arithmetic and `build`/`mesh`/`render`/`save`.
+- `cdcad mcp`: a Model Context Protocol tool server, so MCP clients can validate, build and see renders of recipes.
+- `inspect --density`; `make cone` and `make torus`; 3MF in `project build --format`.
+- Examples: `spring.json`, `torus-knot.json`, `gyroid.json`, `function-vase.json`, `twisted-vase.json`, `surface-plot.json`, `nameplate.json` and `wheel.py`; `gallery.png` is rendered from them. `AGENTS.md` describes the workflow for coding agents.
+
 # 0.4.0
 
 First release on PyPI.

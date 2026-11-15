@@ -1,102 +1,171 @@
-"""Arithmetic expressions and recipe input."""
-import ast
-import math
+"""Parameters, dimension expressions and recipe input.
 
-from ._common import CADError, parse_sets, read_json, read_stdin_json
-from .schema import validate_resolved
+Two kinds of expression appear in a recipe:
+
+* a dimension: any string value starting with '=' (``"=w/2"``) is evaluated once, with
+  the parameters, into a number;
+* a field: a property that the schema marks as a function of variables (``"f"`` of an
+  implicit solid is a function of x, y and z). It stays text, with the parameters it
+  reads written in as numbers, and is evaluated on a grid by the geometry engine.
+"""
+from ._common import CADError, parse_sets, read_json, read_stdin_json, suggest
+from .expr import check, evaluate, evaluate_checked, field_text
+
+RESERVED = {"pi", "tau"}
 
 
 def expression(text, params):
-    """Evaluate a tiny arithmetic AST; never execute Python or allow attributes/indexing."""
-    funcs = {k: getattr(math, k) for k in ("sin", "cos", "tan", "sqrt", "ceil", "floor", "radians", "degrees")}
-    funcs.update(min=min, max=max, abs=abs, round=round)
-    operators = {ast.Add: lambda a, b: a+b, ast.Sub: lambda a, b: a-b,
-                 ast.Mult: lambda a, b: a*b, ast.Div: lambda a, b: a/b,
-                 ast.Mod: lambda a, b: a % b, ast.Pow: lambda a, b: a**b}
-    if len(text) > 1024:
-        raise CADError("Expression exceeds 1024 characters")
-    def walk(n):
-        if isinstance(n, ast.Constant) and type(n.value) in (int, float):
-            value = n.value
-        elif isinstance(n, ast.Name) and n.id in params.keys() | {"pi", "tau"}:
-            value = params[n.id] if n.id in params else getattr(math, n.id)
-        elif isinstance(n, ast.BinOp) and type(n.op) in operators:
-            a, b = walk(n.left), walk(n.right)
-            if isinstance(n.op, ast.Pow) and abs(b) > 100:
-                raise CADError("Power exponent exceeds 100")
-            value = operators[type(n.op)](a, b)
-        elif isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd)):
-            value = walk(n.operand) * (-1 if isinstance(n.op, ast.USub) else 1)
-        elif isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in funcs and not n.keywords:
-            value = funcs[n.func.id](*[walk(a) for a in n.args])
-        else:
-            raise CADError(f"Unsupported expression: {text}")
-        if not isinstance(value, (float, int)) or not math.isfinite(value) or abs(value) > 1e100:
-            raise CADError("Expression result is not a finite, bounded number")
-        return value
-    try:
-        return walk(ast.parse(text, mode="eval").body)
-    except CADError:
-        raise
-    except (ArithmeticError, ValueError, TypeError, SyntaxError, RecursionError) as exc:
-        # Division by zero, math domain errors, wrong argument counts and syntax
-        # errors are bad input, so report them as the documented error type.
-        raise CADError(f"Invalid expression {text!r}: {exc}") from exc
+    """Evaluate one arithmetic expression (without its '=') with the given parameters."""
+    return evaluate(text, params)
 
 
-def resolve_parameters(raw_params, overrides=None):
+def resolve_parameters(raw_params, overrides=None, *, dependencies=None):
+    """Resolve parameter values in dependency order.
+
+    ``dependencies``, when given, receives {name: names it reads}.
+    """
     if not isinstance(raw_params, dict):
         raise CADError("params must be an object")
     unknown = set(overrides or ()) - raw_params.keys()
     if unknown:
-        raise CADError(f"Unknown parameter override: {', '.join(sorted(unknown))}")
+        first = sorted(unknown)[0]
+        raise CADError(f"Unknown parameter override: {', '.join(sorted(unknown))}",
+                       hint=suggest(first, raw_params) or f"declared parameters: {', '.join(raw_params) or 'none'}")
     pending = dict(raw_params)
     pending.update(overrides or {})
-    params = {}
-    while pending:
-        progress = False
-        for name, value in list(pending.items()):
-            if not name.isidentifier() or name in {"pi", "tau"}:
-                raise CADError(f"Invalid or reserved parameter name: {name}")
+    checked, reads = {}, {}
+    for name, value in pending.items():
+        if not isinstance(name, str) or not name.isidentifier() or name in RESERVED:
+            raise CADError(f"Invalid or reserved parameter name: {name}",
+                           hint="parameter names are identifiers like width or hole_r; pi and tau are constants")
+        if isinstance(value, str) and value.startswith("="):
             try:
-                if isinstance(value, str) and value.startswith("="):
-                    value = expression(value[1:], params)
-                elif type(value) not in (int, float) or not math.isfinite(value):
-                    raise CADError(f"Parameter {name} must be a finite number or =expression")
+                checked[name] = check(value[1:], pending.keys())
             except CADError as exc:
-                if "Unsupported expression" in str(exc):
-                    continue
-                raise
-            params[name] = value
-            del pending[name]
-            progress = True
-        if not progress:
-            raise CADError(f"Unresolvable parameter expressions (missing/cyclic/unsupported): {list(pending)}")
-    return params
+                raise CADError(f"Parameter {name}: {exc}", hint=exc.hint) from exc
+            reads[name] = checked[name].names & pending.keys()
+        elif type(value) not in (int, float) or value != value or value in (float("inf"), float("-inf")):
+            raise CADError(f"Parameter {name} must be a finite number or =expression")
+        else:
+            reads[name] = set()
+    if dependencies is not None:
+        dependencies.update(reads)
+    order, state = [], {}
+
+    def visit(name, trail):
+        if state.get(name) == "done":
+            return
+        if state.get(name) == "active":
+            cycle = trail[trail.index(name):] + [name]
+            raise CADError(f"Unresolvable parameter expressions: cycle {' -> '.join(cycle)}")
+        state[name] = "active"
+        for dep in sorted(reads[name]):
+            visit(dep, trail + [name])
+        state[name] = "done"
+        order.append(name)
+
+    for name in pending:
+        visit(name, [])
+    values = {}
+    for name in order:
+        value = pending[name]
+        values[name] = evaluate_checked(checked[name], values) if name in checked else value
+    return {name: values[name] for name in pending}
+
+
+def _variables(schema):
+    """Variables of a field-expression property (also inside a oneOf), else None."""
+    if not isinstance(schema, dict):
+        return None
+    if "x-cdcad-variables" in schema:
+        return schema["x-cdcad-variables"]
+    for choice in schema.get("oneOf", ()):
+        if isinstance(choice, dict) and "x-cdcad-variables" in choice:
+            return choice["x-cdcad-variables"]
+    return None
+
+
+class _Resolver:
+    def __init__(self, params):
+        self.params = params
+        self.used = set()
+
+    def value(self, obj, schema=None, where=""):
+        if isinstance(schema, dict) and schema.get("x-cdcad-literal"):
+            return obj
+        variables = _variables(schema)
+        if variables is not None and isinstance(obj, str):
+            try:
+                text, names = field_text(obj, variables, self.params)
+            except CADError as exc:
+                raise CADError(f"{where}: {exc}", hint=exc.hint or
+                               f"this field is a function of {', '.join(variables)}; parameters may be used too") from exc
+            self.used |= names
+            return text
+        if isinstance(obj, str) and obj.startswith("="):
+            try:
+                checked = check(obj[1:], self.params.keys())
+                value = evaluate_checked(checked, self.params)
+            except CADError as exc:
+                raise CADError(f"{where}: {exc}" if where else str(exc), hint=exc.hint) from exc
+            self.used |= checked.names & self.params.keys()
+            return value
+        if isinstance(obj, list):
+            items = schema.get("items") if isinstance(schema, dict) else None
+            return [self.value(x, items, f"{where}/{i}") for i, x in enumerate(obj)]
+        if isinstance(obj, dict):
+            props = schema.get("properties", {}) if isinstance(schema, dict) else {}
+            return {k: self.value(v, props.get(k), f"{where}/{k}") for k, v in obj.items()}
+        if isinstance(obj, float) and (obj != obj or obj in (float("inf"), float("-inf"))):
+            raise CADError("Non-finite numbers are not allowed")
+        return obj
+
+
+def resolve_details(raw, overrides=None):
+    """Resolve a raw recipe; returns (resolved recipe, info) where info has the
+    parameters each parameter reads and the parameters node values read."""
+    from .schema import PROFILE_OPS, SOLID_OPS, validate_resolved
+    if not isinstance(raw, dict):
+        raise CADError("Recipe must be a JSON object")
+    dependencies = {}
+    params = resolve_parameters(raw.get("params", {}), overrides, dependencies=dependencies)
+    resolver = _Resolver(params)
+    result = {}
+    for key, value in raw.items():
+        if key == "params":
+            result[key] = params
+        elif key in ("profiles", "solids") and isinstance(value, dict):
+            ops = PROFILE_OPS if key == "profiles" else SOLID_OPS
+            nodes = {}
+            for name, node in value.items():
+                spec = ops.get(node.get("op")) if isinstance(node, dict) else None
+                schema = {"properties": spec[1]} if spec else None
+                nodes[name] = resolver.value(node, schema, f"{key}/{name}")
+            result[key] = nodes
+        else:
+            result[key] = resolver.value(value, None, key)
+    if "params" not in result and "params" in raw:
+        result["params"] = params
+    validate_resolved(result)
+    used = set(resolver.used)
+    frontier = list(used)
+    while frontier:  # a parameter read by a used parameter is used too
+        for dep in dependencies.get(frontier.pop(), ()):
+            if dep not in used:
+                used.add(dep)
+                frontier.append(dep)
+    return result, {"parameter_reads": dependencies, "used_parameters": used}
 
 
 def resolve_recipe(raw, overrides=None):
     """Resolve dimension expressions and validate the resulting recipe."""
-    if not isinstance(raw, dict):
-        raise CADError("Recipe must be a JSON object")
-    params = resolve_parameters(raw.get("params", {}), overrides)
+    return resolve_details(raw, overrides)[0]
 
-    def resolve(obj):
-        if isinstance(obj, str) and obj.startswith("="):
-            return expression(obj[1:], params)
-        if isinstance(obj, list):
-            return [resolve(x) for x in obj]
-        if isinstance(obj, dict):
-            return {k: resolve(v) for k, v in obj.items()}
-        if isinstance(obj, float) and not math.isfinite(obj):
-            raise CADError("Non-finite numbers are not allowed")
-        return obj
-    result = resolve({**raw, "params": params})
-    validate_resolved(result)
-    return result
+
+def read_raw(path):
+    return read_stdin_json() if str(path) == "-" else read_json(path)
 
 
 def read_recipe(path, sets=()):
     """Read a recipe file (or '-' for stdin) and resolve parameter overrides."""
-    raw = read_stdin_json() if str(path) == "-" else read_json(path)
-    return resolve_recipe(raw, parse_sets(sets))
+    return resolve_recipe(read_raw(path), parse_sets(sets))

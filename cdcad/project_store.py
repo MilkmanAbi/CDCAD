@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 from ._common import CADError, atomic_bytes, document_path, json_bytes, read_json
-from .project_model import check_manifest, compile_project, inside, safe_name, segment_file
+from .project_model import check_manifest, compile_project, inside, segment_file
 
 METADATA_DIR = ".cdcad"
 LEGACY_METADATA_DIR = ".agentcad"  # metadata directory of projects created before the CDCAD rename
@@ -29,7 +29,13 @@ def load_state(root, allow_pending=False):
         raise CADError("Unfinished project write; use project recover DIR --action rollback or commit")
     manifest = read_json(root/"project.json")
     check_manifest(manifest)
-    documents = {name: read_json(segment_file(root, entry["path"])) for name, entry in manifest["segments"].items()}
+    documents = {}
+    for name, entry in manifest["segments"].items():
+        path = segment_file(root, entry["path"])
+        if not path.is_file():
+            raise CADError(f"Segment {name} source file is missing: {entry['path']}",
+                           hint="restore the file, fix its path with project set, or remove the segment")
+        documents[name] = read_json(path)
     return {"project": manifest, "segments": documents}
 
 
@@ -74,13 +80,13 @@ def commit(root, before, after, action):
         return {"ok": True, "changed": False, "revision": revision(before)}
     for relative, value in writes.items():
         path = inside(root, relative)
-        if relative not in old and path.exists() and read_json(path) != value:
+        if relative not in old and path.exists() and untracked_value(path) != value:
             raise CADError(f"Untracked source file exists and differs: {relative}; move it aside or choose another part name")
     # Keep removed segment source files for recovery/reuse. Removal edits the manifest.
     stamp = history_stamp(root)
     history = root/METADATA_DIR/"history"/f"{stamp}-{revision(before)[:12]}.json"
     atomic_bytes(history, json_bytes({"action": action, "before": before, "after_revision": revision(after)}))
-    backups = {p: old[p] if p in old else read_json(inside(root, p)) if inside(root, p).is_file() else None for p in writes}
+    backups = {p: old[p] if p in old else untracked_value(inside(root, p)) if inside(root, p).is_file() else None for p in writes}
     journal = {"action": action, "before": backups, "after": writes}
     journal_path = root/METADATA_DIR/"pending.json"
     atomic_bytes(journal_path, json_bytes(journal))
@@ -89,6 +95,14 @@ def commit(root, before, after, action):
     journal_path.unlink()
     return {"ok": True, "changed": True, "revision": revision(after), "written": list(writes),
             "history": str(history.relative_to(root))}
+
+
+def untracked_value(path):
+    """A stray file's JSON value, or its raw text when it is not JSON (it still differs)."""
+    try:
+        return read_json(path)
+    except CADError:
+        return {"$unreadable": path.read_text(encoding="utf-8", errors="replace")}
 
 
 HISTORY_ID = re.compile(r"[0-9]{8}T[0-9]{12}Z-[0-9a-f]{12}")
@@ -129,17 +143,25 @@ def history_entry(root, entry_id, current):
         stamp = datetime.strptime(entry_id.split("-")[0], STAMP_FORMAT)
         entry = {"id": entry_id, "time": stamp.isoformat(timespec="microseconds")+"Z", "action": record["action"],
                  "before_revision": revision(record["before"]), "after_revision": record["after_revision"]}
-    except (OSError, ValueError, KeyError, TypeError):
+    except (CADError, OSError, ValueError, KeyError, TypeError):
         return {"id": entry_id, "damaged": True}
-    return {**entry, "current": entry["after_revision"] == current}
+    return entry
 
 
 def history_report(root, state, limit):
     if limit < 1:
         raise CADError("--limit must be at least 1")
     current, ids = revision(state), history_ids(root)
-    return {"ok": True, "revision": current, "total": len(ids),
-            "entries": [history_entry(root, entry_id, current) for entry_id in reversed(ids[-limit:])]}
+    entries = [history_entry(root, entry_id, current) for entry_id in reversed(ids[-limit:])]
+    # A restore can bring back a revision an older edit also produced; "current" marks
+    # only the newest edit that led to the present state.
+    marked = False
+    for entry in entries:
+        if "damaged" in entry:
+            continue
+        entry["current"] = not marked and entry["after_revision"] == current
+        marked = marked or entry["current"]
+    return {"ok": True, "revision": current, "total": len(ids), "entries": entries}
 
 
 def history_snapshot(root, entry):
@@ -158,7 +180,7 @@ def history_snapshot(root, entry):
     try:
         before = read_json(path)["before"]
         intact = isinstance(before["project"], dict) and isinstance(before["segments"], dict)
-    except (ValueError, KeyError, TypeError):
+    except (CADError, ValueError, KeyError, TypeError):
         intact = False
     if not intact:
         raise CADError(f"History entry is damaged: {entry}")

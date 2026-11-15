@@ -5,7 +5,7 @@ import re
 
 from jsonschema import Draft202012Validator
 
-from ._common import CADError, UNITS, document_path
+from ._common import CADError, UNITS, document_path, suggest
 from .graph import validate_graph
 from .recipe import expression, resolve_parameters, resolve_recipe
 from .schema import ANCHOR, BOOL, NUM, STR, array, validate_resolved, vector
@@ -116,7 +116,8 @@ def compile_project(root, state, overrides=None):
         known_params.update(entry.get("params", {}))
     unknown = overrides.keys() - known_params
     if unknown:
-        raise CADError(f"Unknown parameter override: {', '.join(sorted(unknown))}")
+        raise CADError(f"Unknown parameter override: {', '.join(sorted(unknown))}",
+                       hint=suggest(sorted(unknown)[0], known_params) or f"known parameters: {', '.join(sorted(known_params))}")
     globals_resolved = resolve_parameters(global_params, {
         name: value for name, value in overrides.items() if name in global_params
     })

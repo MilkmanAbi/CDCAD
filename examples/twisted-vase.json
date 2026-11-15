@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "description": "A five-lobed vase that twists and narrows as it rises: a wall ring extruded with twist and scale, on a solid floor.",
+  "params": {"radius": 30, "lobes": 5, "lobe": 4, "wall": 1.6, "height": 110, "twist": 90, "floor": 2},
+  "profiles": {
+    "outline": {"op": "curve", "x": "(radius + lobe*cos(lobes*t))*cos(t)", "y": "(radius + lobe*cos(lobes*t))*sin(t)", "samples": 360},
+    "inner": {"op": "offset", "input": "outline", "distance": "=-wall"},
+    "ring": {"op": "difference", "inputs": ["outline", "inner"]}
+  },
+  "solids": {
+    "wall": {"op": "extrude", "profile": "ring", "height": "=height", "twist": "=twist", "scale": 0.75, "slices": 90},
+    "base": {"op": "extrude", "profile": "outline", "height": "=floor"},
+    "vase": {"op": "union", "inputs": ["wall", "base"]}
+  },
+  "exports": [{"solid": "vase", "path": "twisted-vase.stl"}],
+  "checks": [{"solid": "vase", "size_z": {"approx": "=height"}, "fits": [220, 220, 250]}]
+}

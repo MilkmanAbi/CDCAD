@@ -138,13 +138,79 @@ def loft(section_geoms, zs, samples):
     return valid_mesh(trimesh.Trimesh(vertices=vertices, faces=faces, process=True))
 
 
-def heightfield(file, node):
+def image_values(file, limit):
+    """Read a picture as floats in [0, 1], keeping 16-bit and float precision.
+
+    The longer side is resampled to at most ``limit`` pixels. Rows run top to bottom,
+    as the picture is stored.
+    """
     from PIL import Image
+    with Image.open(file) as im:
+        im.load()
+        mode = im.mode
+        if mode in ("I;16", "I;16B", "I;16L", "I;16N", "I"):
+            values = np.asarray(im, dtype=np.float64)
+            if values.min() < 0 or values.max() > 65535:
+                raise CADError(f"{file.name}: 32-bit integer images must hold values 0..65535")
+            values = values / 65535.0
+        elif mode == "F":
+            values = np.asarray(im, dtype=np.float64)
+        else:
+            # RGB and palette images use their luminance; any alpha channel is ignored.
+            values = np.asarray(im.convert("L"), dtype=np.float64) / 255.0
+    if values.ndim != 2 or min(values.shape) < 2:
+        raise CADError("Heightfield images must be at least 2x2 pixels")
+    if not np.isfinite(values).all() or values.min() < 0 or values.max() > 1:
+        raise CADError("Floating-point heightfield images must hold finite values in [0,1]")
+    rows, cols = values.shape
+    scale = min(1.0, limit/max(rows, cols))
+    if scale < 1.0:
+        size = (max(2, round(cols*scale)), max(2, round(rows*scale)))
+        resampled = Image.fromarray(values.astype(np.float32)).resize(size, Image.Resampling.LANCZOS)
+        # Lanczos rings slightly past the input range at sharp edges.
+        values = np.clip(np.asarray(resampled, dtype=np.float64), 0.0, 1.0)
+    return values
+
+
+def grid_solid(x, y, top_z, bottom_z):
+    """Closed solid between a top surface z = top_z[j, i] over the grid (x[i], y[j]) and a flat
+    bottom at bottom_z. Faces are built with numpy, so large grids stay fast."""
+    rows, cols = top_z.shape
+    xx, yy = np.meshgrid(x, y)
+    top = np.column_stack([xx.ravel(), yy.ravel(), top_z.ravel()])
+    bottom = top.copy()
+    bottom[:, 2] = bottom_z
+    n = len(top)
+    j, i = np.meshgrid(np.arange(rows-1), np.arange(cols-1), indexing="ij")
+    a = (j*cols+i).ravel()
+    b, c, d = a+1, a+cols, a+cols+1
+    upper = np.concatenate([np.column_stack([a, b, d]), np.column_stack([a, d, c])])
+    lower = np.concatenate([np.column_stack([a, d, b]), np.column_stack([a, c, d])]) + n
+    border = np.r_[np.arange(cols), np.arange(1, rows)*cols+cols-1,
+                   np.arange((rows-1)*cols+cols-2, (rows-1)*cols-1, -1), np.arange(rows-2, 0, -1)*cols]
+    nxt = np.roll(border, -1)
+    sides = np.concatenate([np.column_stack([border, border+n, nxt+n]), np.column_stack([border, nxt+n, nxt])])
+    faces = np.concatenate([upper, lower, sides])
+    # Every vertex is distinct by construction (the top stays above the bottom), so there is
+    # nothing for trimesh's vertex merging to do.
+    return trimesh.Trimesh(vertices=np.vstack([top, bottom]), faces=faces, process=False)
+
+
+def heightfield(file, node):
+    """Relief from a picture or a 2D .npy array of values in [0, 1].
+
+    Pictures keep the orientation you see on screen: their top row is at the high-Y edge.
+    Arrays follow numpy's meshgrid convention instead: row 0 is the low-Y edge. ``flip_y``
+    overrides either default.
+    """
     limit = node.get("max_samples", 256)
-    if file.suffix.lower() == ".npy":
+    is_array = file.suffix.lower() == ".npy"
+    if is_array:
         values = np.load(file, allow_pickle=False)
         if values.ndim != 2 or min(values.shape) < 2:
             raise CADError("Heightfield .npy must be a 2D array at least 2x2")
+        if not np.issubdtype(values.dtype, np.number) or np.issubdtype(values.dtype, np.complexfloating):
+            raise CADError("Heightfield .npy must hold real numbers in [0,1]")
         stride = max(1, math.ceil((max(values.shape)-1)/(limit-1)))
         iy = np.unique(np.r_[np.arange(0, values.shape[0], stride), values.shape[0]-1])
         ix = np.unique(np.r_[np.arange(0, values.shape[1], stride), values.shape[1]-1])
@@ -152,64 +218,198 @@ def heightfield(file, node):
         y_fraction = iy/(values.shape[0]-1)
         values = values[np.ix_(iy, ix)].astype(float)
     else:
-        with Image.open(file) as im:
-            im = im.convert("L")
-            im.thumbnail((limit, limit), Image.Resampling.LANCZOS)
-            values = np.asarray(im, dtype=float) / 255.0
+        values = image_values(file, limit)
         x_fraction = np.linspace(0, 1, values.shape[1])
         y_fraction = np.linspace(0, 1, values.shape[0])
     if min(values.shape) < 2 or not np.isfinite(values).all() or values.min() < 0 or values.max() > 1:
         raise CADError("Heightfield samples must be finite values in [0,1], at least 2x2")
+    if node.get("flip_y", not is_array):
+        values = values[::-1]
+        y_fraction = (1-y_fraction)[::-1]
     if node.get("invert", False):
         values = 1-values
-    rows, cols = values.shape
-    x = x_fraction*node["size"][0]
-    y = y_fraction*node["size"][1]
-    xx, yy = np.meshgrid(x, y)
-    top = np.column_stack([xx.ravel(), yy.ravel(), (node.get("base", 1)+values*node["height"]).ravel()])
-    bottom = top.copy()
-    bottom[:, 2] = 0
-    n = len(top)
-    faces = []
-    for j in range(rows-1):
-        for i in range(cols-1):
-            a, b = j*cols+i, j*cols+i+1
-            c, d = (j+1)*cols+i, (j+1)*cols+i+1
-            faces.extend([[a, b, d], [a, d, c], [n+a, n+d, n+b], [n+a, n+c, n+d]])
-    border = [*range(cols), *[j*cols+cols-1 for j in range(1, rows)],
-              *range((rows-1)*cols+cols-2, (rows-1)*cols-1, -1),
-              *[j*cols for j in range(rows-2, 0, -1)]]
-    for a, b in zip(border, border[1:]+border[:1]):
-        faces.extend([[a, n+a, n+b], [a, n+b, b]])
-    return valid_mesh(trimesh.Trimesh(vertices=np.vstack([top, bottom]), faces=faces, process=True))
+    top = node.get("base", 1)+values*node["height"]
+    mesh = grid_solid(x_fraction*node["size"][0], y_fraction*node["size"][1], top, 0.0)
+    return valid_mesh(mesh)
+
+
+MESH_INPUTS = (".stl", ".obj", ".ply", ".off", ".glb", ".3mf")
+
+# 3MF is a zip of XML parts. Only the core specification's geometry is read: objects with
+# meshes or components, build items and their transforms, and the model unit. Colours,
+# materials and slicer settings are ignored. The production extension's p:path lets a
+# component point into another model part, which Bambu Studio and PrusaSlicer use.
+NS_3MF = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
+NS_3MF_PRODUCTION = "http://schemas.microsoft.com/3dmanufacturing/production/2015/06"
+REL_3MF_MODEL = "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"
+UNITS_3MF = {"micron": 0.001, "millimeter": 1.0, "centimeter": 10.0, "inch": 25.4, "foot": 304.8, "meter": 1000.0}
+MAX_3MF_PART = 1 << 30
+
+
+def _matrix_3mf(text):
+    """3MF transforms are 12 numbers for row vectors: [x y z 1] times a 4x3 matrix."""
+    if not text:
+        return np.eye(4)
+    values = [float(v) for v in text.split()]
+    if len(values) != 12 or not np.isfinite(values).all():
+        raise CADError(f"Invalid 3MF transform: {text!r}")
+    m = np.asarray(values).reshape(4, 3)
+    matrix = np.eye(4)
+    matrix[:3, :3] = m[:3].T
+    matrix[:3, 3] = m[3]
+    return matrix
+
+
+def read_3mf(file):
+    """Read a .3mf path or file object into one mesh in millimetres."""
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    label = getattr(file, "name", "3MF data")
+    try:
+        archive = zipfile.ZipFile(file)
+    except zipfile.BadZipFile as exc:
+        raise CADError(f"{label} is not a 3MF (zip) package") from exc
+    with archive:
+        names = {name.lower(): name for name in archive.namelist()}
+
+        def part(name):
+            key = name.lstrip("/").lower()
+            if key not in names:
+                raise CADError(f"3MF package has no part {name}")
+            info = archive.getinfo(names[key])
+            if info.file_size > MAX_3MF_PART:
+                raise CADError(f"3MF part {name} is larger than 1 GiB")
+            return ET.fromstring(archive.read(info))
+
+        main = None
+        if "_rels/.rels" in names:
+            for rel in part("_rels/.rels"):
+                if rel.get("Type") == REL_3MF_MODEL:
+                    main = rel.get("Target")
+        main = (main or "3D/3dmodel.model").lstrip("/")
+        models, objects = {}, {}
+
+        def model(name):
+            name = name.lstrip("/")
+            if name not in models:
+                root = part(name)
+                models[name] = root
+                for obj in root.iter(f"{{{NS_3MF}}}object"):
+                    objects[(name.lower(), obj.get("id"))] = obj
+            return models[name]
+
+        root = model(main)
+        unit = root.get("unit", "millimeter")
+        if unit not in UNITS_3MF:
+            raise CADError(f"Unsupported 3MF unit: {unit}")
+        pieces = []
+
+        def place(part_name, object_id, matrix, depth):
+            if depth > 32:
+                raise CADError("3MF components nest too deeply (cycle?)")
+            model(part_name)
+            obj = objects.get((part_name.lower(), object_id))
+            if obj is None:
+                raise CADError(f"3MF build references missing object {object_id}")
+            mesh = obj.find(f"{{{NS_3MF}}}mesh")
+            if mesh is not None:
+                vertices = np.array([[float(v.get("x")), float(v.get("y")), float(v.get("z"))]
+                                     for v in mesh.iter(f"{{{NS_3MF}}}vertex")], dtype=float).reshape(-1, 3)
+                faces = np.array([[int(t.get("v1")), int(t.get("v2")), int(t.get("v3"))]
+                                  for t in mesh.iter(f"{{{NS_3MF}}}triangle")], dtype=np.int64).reshape(-1, 3)
+                if len(faces) and (faces.min() < 0 or faces.max() >= len(vertices)):
+                    raise CADError(f"3MF object {object_id} has triangle indices out of range")
+                pieces.append(trimesh.Trimesh(vertices=vertices, faces=faces, process=False).apply_transform(matrix))
+            components = obj.find(f"{{{NS_3MF}}}components")
+            if components is not None:
+                for component in components.findall(f"{{{NS_3MF}}}component"):
+                    target = component.get(f"{{{NS_3MF_PRODUCTION}}}path") or part_name
+                    place(target.lstrip("/"), component.get("objectid"),
+                          matrix @ _matrix_3mf(component.get("transform")), depth+1)
+
+        build = root.find(f"{{{NS_3MF}}}build")
+        for item in [] if build is None else build.findall(f"{{{NS_3MF}}}item"):
+            target = item.get(f"{{{NS_3MF_PRODUCTION}}}path") or main
+            place(target.lstrip("/"), item.get("objectid"), _matrix_3mf(item.get("transform")), 0)
+    if not pieces:
+        raise CADError(f"{label} contains no build items with meshes")
+    combined = trimesh.util.concatenate(pieces)
+    combined.apply_scale(UNITS_3MF[unit])
+    return trimesh.Trimesh(vertices=combined.vertices, faces=combined.faces, process=True)
+
+
+def export_3mf(mesh):
+    """A minimal core-specification 3MF in millimetres. Byte-identical for identical meshes."""
+    import zipfile
+
+    def fmt(v):
+        return format(float(v), ".9g")
+    vertices = "".join(f'<vertex x="{fmt(x)}" y="{fmt(y)}" z="{fmt(z)}"/>' for x, y, z in mesh.vertices)
+    triangles = "".join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in mesh.faces)
+    model = (f'<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" xmlns="{NS_3MF}">'
+             f'<metadata name="Application">CDCAD</metadata><resources><object id="1" type="model"><mesh>'
+             f"<vertices>{vertices}</vertices><triangles>{triangles}</triangles></mesh></object></resources>"
+             f'<build><item objectid="1"/></build></model>\n')
+    types = ('<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+             '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>\n')
+    rels = ('<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            f'<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="{REL_3MF_MODEL}"/></Relationships>\n')
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name, text in (("[Content_Types].xml", types), ("_rels/.rels", rels), ("3D/3dmodel.model", model)):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(info, text.encode("utf-8"))
+    return buffer.getvalue()
 
 
 def load_mesh(file):
-    if file.suffix.lower() not in {".stl", ".obj", ".ply", ".off", ".glb", ".3mf"}:
+    file = Path(file)
+    if file.suffix.lower() not in MESH_INPUTS:
         raise CADError("Mesh input must be STL, OBJ, PLY, OFF, GLB or 3MF")
-    mesh = trimesh.load_scene(str(file), process=True).to_mesh()
+    if not file.is_file():
+        raise CADError(f"Mesh file not found: {file}")
+    if file.suffix.lower() == ".3mf":
+        mesh = read_3mf(file)
+    else:
+        mesh = trimesh.load_scene(str(file), process=True).to_mesh()
     return valid_mesh(mesh, solid=False)
 
 
-def mesh_report(mesh):
+def mesh_report(mesh, density=None):
+    """Topology and measurements. ``density`` in g/cm^3 adds the mass in grams (coordinates in mm)."""
     valid_mesh(mesh, solid=False)
-    return {"vertices": len(mesh.vertices), "faces": len(mesh.faces),
-            "watertight": bool(mesh.is_watertight), "winding_consistent": bool(mesh.is_winding_consistent),
-            "is_volume": bool(mesh.is_volume), "volume": float(mesh.volume), "area": float(mesh.area),
-            "bounds": mesh.bounds.tolist(), "extents": mesh.extents.tolist(),
-            "components": len(mesh.split(only_watertight=False)), "euler_number": int(mesh.euler_number)}
+    solid = bool(mesh.is_volume)
+    report = {"vertices": len(mesh.vertices), "faces": len(mesh.faces),
+              "watertight": bool(mesh.is_watertight), "winding_consistent": bool(mesh.is_winding_consistent),
+              "is_volume": solid, "volume": float(mesh.volume), "area": float(mesh.area),
+              "bounds": mesh.bounds.tolist(), "extents": mesh.extents.tolist(),
+              "center_mass": mesh.center_mass.tolist() if solid else None,
+              "components": len(mesh.split(only_watertight=False)), "euler_number": int(mesh.euler_number)}
+    if density is not None:
+        report["density"] = density
+        report["mass_g"] = float(mesh.volume)*density/1000.0 if solid else None
+    return report
 
 
 def export_bytes(mesh, path, allow_open=False):
     valid_mesh(mesh, solid=not allow_open)
     suffix = Path(path).suffix.lower()
     if suffix[1:] not in EXPORT_FORMATS:
-        raise CADError("Export extension must be .stl, .ply, .obj, .glb or .off")
-    data = mesh.export(file_type=suffix[1:])
-    data = data.encode() if isinstance(data, str) else data
-    if suffix == ".stl" and not allow_open:
-        reloaded = trimesh.load_mesh(io.BytesIO(data), file_type="stl", process=True)
+        raise CADError("Export extension must be one of " + ", ".join("." + f for f in EXPORT_FORMATS))
+    if suffix == ".3mf":
+        data = export_3mf(mesh)
+    else:
+        data = mesh.export(file_type=suffix[1:])
+        data = data.encode() if isinstance(data, str) else data
+    if suffix in (".stl", ".3mf") and not allow_open:
+        if suffix == ".stl":
+            reloaded = trimesh.load_mesh(io.BytesIO(data), file_type="stl", process=True)
+        else:
+            reloaded = read_3mf(io.BytesIO(data))
         if not reloaded.is_volume:
-            raise CADError("Serialized STL is not solid after vertex merging/float32 rounding; "
+            raise CADError(f"Serialized {suffix[1:].upper()} is not solid after vertex merging/rounding; "
                            "adjust tangent contacts or tiny features, or explicitly allow open export")
     return data

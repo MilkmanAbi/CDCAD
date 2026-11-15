@@ -13,7 +13,7 @@ name: Publish
 #
 # Each release:
 #   1. Change VERSION in cdcad/_common.py and add the changes to CHANGELOG.md.
-#   2. Commit, then tag it: git tag v0.3.1 && git push origin v0.3.1
+#   2. Commit, then tag it: git tag v0.5.0 && git push origin v0.5.0
 #   3. Create a GitHub release from that tag. Publishing the release starts the upload.
 #
 # To build and check the files without uploading, run this workflow by hand with target "none".

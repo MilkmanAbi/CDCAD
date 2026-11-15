@@ -33,25 +33,32 @@ def schema(args):
     return recipe_schema()
 
 
-def resolve_command(args):
+def load(args):
+    """(resolved recipe, resolution info) with the graph checked."""
+    from .._common import parse_sets
     from ..graph import validate_graph
-    from ..recipe import read_recipe
+    from ..recipe import read_raw, resolve_details
 
-    recipe = read_recipe(args.recipe, args.set)
+    recipe, info = resolve_details(read_raw(args.recipe), parse_sets(args.set))
     validate_graph(recipe)
-    return recipe
+    return recipe, info
+
+
+def resolve_command(args):
+    return load(args)[0]
 
 
 def validate(args):
-    resolve_command(args)
-    return {"ok": True, "note": "Schema and graph valid; geometry and files not evaluated"}
+    from ..build import recipe_warnings
+    recipe, info = load(args)
+    return {"ok": True, "warnings": recipe_warnings(recipe, info),
+            "note": "Schema, references and expressions valid; geometry, files and checks not evaluated"}
 
 
 def build_command(args):
-    from ..build import build, recipe_source_paths
-    from ..recipe import read_recipe
+    from ..build import build, recipe_source_paths, recipe_warnings
 
-    recipe = read_recipe(args.recipe, args.set)
+    recipe, info = load(args)
     base = Path.cwd() if args.recipe == "-" else Path(args.recipe).resolve().parent
     base = Path(args.base_dir).resolve() if args.base_dir else base
     recipe_files = {Path(args.recipe).resolve()} if args.recipe != "-" else set()
@@ -62,7 +69,7 @@ def build_command(args):
         if report_path in source_paths | model_paths:
             raise CADError("Report path conflicts with a source or model path")
     result = build(recipe, base, args.out_dir, args.target, args.force, args.dry_run, args.cache_dir,
-                   protected_paths=recipe_files)
+                   protected_paths=recipe_files, warnings=recipe_warnings(recipe, info))
     if args.report:
         atomic_bytes(args.report, json_bytes(result))
     return result

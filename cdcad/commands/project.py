@@ -7,7 +7,7 @@ from pathlib import Path
 from ._output import add_units
 from .._common import CADError, EXPORT_FORMATS, atomic_bytes, document_path, json_bytes, parse_sets, read_json, read_stdin_json
 from ..project_build import project_build
-from ..project_model import compile_project, inside, project_schema, safe_name, segment_file
+from ..project_model import compile_project, project_schema, safe_name, segment_file
 from ..project_store import (
     METADATA_DIR, apply_patch, history_report, history_snapshot, init_project, load_state, mutate,
     pointer_parent, project_lock, recover as recover_project, revision, segment_recipe,
@@ -46,6 +46,7 @@ def add_parser(subparsers):
     compile_p = s.add_parser("compile", help="Flatten the project into a standalone recipe")
     compile_p.add_argument("directory")
     compile_p.add_argument("-o", "--output", required=True)
+    compile_p.add_argument("--force", action="store_true", help="Replace an existing output file")
     compile_p.add_argument("--set", action="append", default=[], metavar="NAME=VALUE",
                            help="Override a declared dimension; repeatable")
     edits = {
@@ -146,6 +147,8 @@ def execute(args):
                 output = Path(args.output).resolve()
                 if output == root/"project.json" or any(output.is_relative_to((root/p).resolve()) for p in ("segments", METADATA_DIR, "assets")):
                     raise CADError("Compiled recipe cannot overwrite project source or metadata")
+                if output.exists() and not args.force:
+                    raise CADError(f"Output exists: {output}; use --force to replace")
                 atomic_bytes(output, json_bytes(recipe))
                 return {"ok": True, "path": str(output), "note": "External asset paths are absolute"}
             return {"ok": True, "revision": revision(state), "project": state["project"],

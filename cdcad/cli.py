@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 import sys
 
-from ._common import CADError, EXPORT_FORMATS, UNITS, VERSION, dependency_versions
-from .commands import mesh, model, project, recipe
+from ._common import CADError, EXPORT_FORMATS, UNITS, VERSION, dependency_versions, error_report
+from .commands import docs, mesh, model, project, recipe, view
 from .schema import PROFILE_OPS, SOLID_OPS
 
 
@@ -29,28 +29,34 @@ def parser():
     model.register(commands)
     recipe.register(commands)
     mesh.register(commands)
+    view.register(commands)
+    docs.register(commands)
     project_commands = project.add_parser(commands)
     discovery = commands.add_parser("capabilities", help="List commands, modeling operations, and supported formats")
     discovery.set_defaults(handler=capabilities, command_choices=commands.choices,
                            project_choices=project_commands.choices)
     commands.add_parser("serve", help="Run a persistent JSON-lines process on stdin/stdout")
+    commands.add_parser("mcp", help="Run a Model Context Protocol tool server on stdin/stdout (for MCP clients)")
     return application
 
 
 def capabilities(args):
+    from .expr import FUNCTIONS
+    from .render import VIEWS
     return {
         "ok": True, "version": VERSION, "package": str(Path(__file__).resolve().parent),
         "recipe_version": 1, "project_version": 1,
         "profiles": list(PROFILE_OPS), "solids": list(SOLID_OPS),
         "commands": list(args.command_choices), "project_commands": list(args.project_choices),
         "units": dict(UNITS), "export_formats": list(EXPORT_FORMATS),
+        "views": ["grid", *VIEWS], "functions": list(FUNCTIONS),
         "dependencies": dependency_versions(),
     }
 
 
 def execute(args):
-    if args.command == "serve":
-        raise CADError("serve is a top-level process mode and cannot be nested")
+    if args.command in ("serve", "mcp"):
+        raise CADError(f"{args.command} is a top-level process mode and cannot be nested")
     return args.handler(args)
 
 
@@ -61,9 +67,16 @@ def main(argv=None):
         if args.command == "serve":
             from .worker import serve
             return serve(application, execute)
+        if args.command == "mcp":
+            from .mcp import serve
+            return serve(application, execute)
         indent = 2 if args.pretty else None
         separators = None if args.pretty else (",", ":")
-        print(json.dumps(execute(args), indent=indent, separators=separators, allow_nan=False))
+        result = execute(args)
+        if isinstance(result, docs.Text):
+            sys.stdout.write(result)
+        else:
+            print(json.dumps(result, indent=indent, separators=separators, allow_nan=False))
         return 0
     except KeyboardInterrupt:
         print(json.dumps({"ok": False, "error": "Interrupted", "type": "KeyboardInterrupt"}), file=sys.stderr)
@@ -71,5 +84,5 @@ def main(argv=None):
     except Exception as exc:
         if args.debug:
             raise
-        print(json.dumps({"ok": False, "error": str(exc), "type": type(exc).__name__}), file=sys.stderr)
+        print(json.dumps(error_report(exc)), file=sys.stderr)
         return 2
