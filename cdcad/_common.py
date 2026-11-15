@@ -7,7 +7,7 @@ from pathlib import Path, PureWindowsPath
 import secrets
 import sys
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 UNITS = {"mm": 1.0, "cm": 10.0, "m": 1000.0, "in": 25.4}
 EXPORT_FORMATS = ("stl", "ply", "obj", "glb", "off")
 GEOMETRY_DEPENDENCIES = (

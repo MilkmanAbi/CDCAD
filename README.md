@@ -25,14 +25,14 @@ It doesn't judge printability. It checks that a mesh is watertight and has a pos
 
 ## Install
 
-You need Python 3.11 or newer. It isn't on PyPI yet, so install from GitHub, ideally inside a virtualenv:
+You need Python 3.11 or newer. Install it from PyPI, ideally inside a virtualenv:
 
 ```sh
-python -m pip install git+https://github.com/MilkmanAbi/CDCAD.git
+python -m pip install cdcad
 cdcad --version
 ```
 
-The dependencies (numpy, scipy, trimesh, shapely, manifold3d and a few more) come along automatically. To work on it, clone the repo and run `python -m pip install -e ".[test]"`.
+The dependencies (numpy, scipy, trimesh, shapely, manifold3d and a few more) come along automatically. For the development version, install from GitHub instead: `python -m pip install git+https://github.com/MilkmanAbi/CDCAD.git`. To work on it, clone the repo and run `python -m pip install -e ".[test]"`.
 
 ## Things to try
 

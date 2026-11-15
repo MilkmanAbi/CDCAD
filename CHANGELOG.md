@@ -1,4 +1,6 @@
-# Unreleased
+# 0.4.0
+
+First release on PyPI.
 
 - The README is now a short introduction. The operation tables, flags and format rules moved to `REFERENCE.md`.
 - Added `examples/vase.py` (a vase lathed from a formula) and `examples/ripple.py` (a numpy height map built as a relief), with tests that run them.
