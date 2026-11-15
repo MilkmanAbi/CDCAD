@@ -1,5 +1,10 @@
 # CDCAD
 
+> Installing CDCAD from pip
+```sh
+pip install cdcad
+```
+
 CDCAD is a small command-line tool that builds STL files from numbers, formulas, drawings and images. You describe the part in a JSON file, an SVG, a grayscale picture or a bit of Python, and it writes the mesh and tells you whether that mesh is a closed solid. The name is short for CLI-driven CAD.
 
 ```sh
