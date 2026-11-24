@@ -1,3 +1,17 @@
+# Unreleased
+
+New:
+
+- STEP export: `.step` and `.stp` files hold the mesh as planar faces (coplanar triangles are merged, so a box is six faces and holes are inner loops). Output is deterministic and reads in CAD programs.
+- `fillet` and `chamfer` on solids: any closed solid is rounded or bevelled by Minkowski morphology in Manifold. On convex solids every edge is done; on non-convex solids `edges: concave` fills the seams and rounding convex edges is rejected with a hint (fillet the simple parts before the union).
+- `fillet` and `chamfer` on profiles: exact corner radii and bevels for 2D outlines.
+- `extrude` takes `top` and `bottom` edge fillets or chamfers (exact, holes included); they cannot be combined with twist or scale.
+- `spline` profile: a smooth closed outline or a drawn curve through points.
+- `loft` takes `smooth`, which curves the sides through all sections with a spline.
+- `sweep` takes `smooth`, which runs the profile along a spline through the path points.
+- `smooth` solid: a smooth, subdivided surface (Manifold's smooth constructor). Edges sharper than `sharp_angle` stay creased; a faceted sphere becomes a sphere.
+- `REFERENCE.md` tables and `recipe.schema.json` list the new operations.
+
 # 0.5.0
 
 Changes that can alter existing results:

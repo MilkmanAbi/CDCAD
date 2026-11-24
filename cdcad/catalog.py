@@ -54,6 +54,8 @@ CUTOUT = {"oneOf": [{"type": "object", "additionalProperties": False,
 CURVE3 = {"type": "object", "additionalProperties": False, "required": ["x", "y", "z"], "properties": {
     "x": expr("t"), "y": expr("t"), "z": expr("t"), "t": RANGE,
     "samples": {"type": "integer", "minimum": 2, "maximum": 1000000}}}
+EDGE = {"type": "object", "additionalProperties": False, "minProperties": 1, "properties": {
+    "fillet": POS, "chamfer": POS, "segments": {"type": "integer", "minimum": 1, "maximum": 256}}}
 TRANSFORM = {"translate": V3, "rotate": V3, "scale": V3, "matrix": vector(4, vector(4))}
 
 OPS = {"profiles": {}, "solids": {}}
@@ -112,6 +114,15 @@ op("profiles", "stroke", "A polyline thickened to `width`, like a pen line.",
     "cap": ({"enum": ["round", "square", "flat"]}, "End cap style", "round"), "join": (JOIN, "Corner style", "round")},
    ex({"p": {"op": "stroke", "points": [[0, 0], [20, 0], [20, 15]], "width": 3}},
       {"part": {"op": "extrude", "profile": "p", "height": 2}}), group="shapes")
+op("profiles", "spline", "Smooth curve through points (a cubic spline). Closed, it is a smooth outline that "
+   "joins itself without a kink; with `width` it is drawn as a line of that width instead, open unless `closed`.",
+   {"points": (array(V2, 2), "Points the curve passes through, in order")},
+   {"closed": (BOOL, "Join the end back to the start (default: true without width, false with width)", None),
+    "width": (POS, "Draw the curve as a line of this width instead of filling it", None),
+    "cap": ({"enum": ["round", "square", "flat"]}, "End cap style for an open line", "round"),
+    "samples": ({"type": "integer", "minimum": 3, "maximum": 1000000}, "Points along the curve", 256)},
+   ex({"blob": {"op": "spline", "points": [[0, 0], [30, -5], [40, 15], [20, 30], [-5, 20]]}},
+      {"part": {"op": "extrude", "profile": "blob", "height": 4}}), group="shapes")
 op("profiles", "slot", "Rounded slot (stadium) of overall size [width, height].",
    {"size": (vector(2, POS), "[width, height]")}, {"center": (V2, "Centre point", [0, 0])},
    ex({"p": {"op": "slot", "size": [30, 8]}}, {"part": {"op": "extrude", "profile": "p", "height": 2}}), group="shapes")
@@ -175,6 +186,19 @@ op("profiles", "offset", "Grow (positive) or shrink (negative) a profile by a di
    {"input": (REF, "Profile name"), "distance": (NUM, "Offset distance")}, {"join": (JOIN, "Corner style", "round")},
    ex({"a": SQUARE, "p": {"op": "offset", "input": "a", "distance": 3}}, {"part": {"op": "extrude", "profile": "p", "height": 2}}),
    group="modify")
+op("profiles", "fillet", "Round the corners of a profile with an exact radius: outside (convex) corners, inside "
+   "(concave) corners or both. Parts narrower than twice the radius are removed.",
+   {"input": (REF, "Profile name"), "radius": (POS, "Corner radius")},
+   {"corners": ({"enum": ["all", "convex", "concave"]}, "Which corners to round", "all"),
+    "segments": ({"type": "integer", "minimum": 1, "maximum": 256}, "Arc segments per quarter turn", 16)},
+   ex({"l": {"op": "polygon", "points": [[0, 0], [40, 0], [40, 10], [10, 10], [10, 30], [0, 30]]},
+       "p": {"op": "fillet", "input": "l", "radius": 3}}, {"part": {"op": "extrude", "profile": "p", "height": 4}}),
+   group="modify")
+op("profiles", "chamfer", "Bevel the corners of a profile; at a right-angled corner each leg of the bevel is `distance`.",
+   {"input": (REF, "Profile name"), "distance": (POS, "Bevel size")},
+   {"corners": ({"enum": ["all", "convex", "concave"]}, "Which corners to bevel", "all")},
+   ex({"a": {"op": "rectangle", "size": [30, 20]}, "p": {"op": "chamfer", "input": "a", "distance": 4}},
+      {"part": {"op": "extrude", "profile": "p", "height": 3}}), group="modify")
 op("profiles", "transform", "Scale, then rotate (degrees), then translate a profile about the origin.",
    {"input": (REF, "Profile name")},
    {"scale": (V2, "[sx, sy]; negative mirrors", [1, 1]), "rotate": (NUM, "Degrees counter-clockwise", 0),
@@ -241,9 +265,14 @@ op("solids", "extrude", "Extrude a profile up from `z`. `twist` turns the top (d
    {"profile": (REF, "Profile name"), "height": (POS, "Height")},
    {"z": (NUM, "Starting Z", 0), "twist": (NUM, "Rotation of the top in degrees, counter-clockwise", 0),
     "scale": ({"oneOf": [POS, vector(2, POS)]}, "Top size relative to the bottom: a number or [sx, sy]", 1),
-    "slices": ({"type": "integer", "minimum": 1, "maximum": 10000}, "Layers for twist/scale", "auto")},
+    "slices": ({"type": "integer", "minimum": 1, "maximum": 10000}, "Layers for twist/scale", "auto"),
+    "top": (EDGE, "Round or bevel the top edges: {fillet: r} or {chamfer: d}, optionally segments", None),
+    "bottom": (EDGE, "Round or bevel the bottom edges, like top", None)},
    ex({"star": {"op": "curve", "x": "(12 + 3*cos(5*t))*cos(t)", "y": "(12 + 3*cos(5*t))*sin(t)", "samples": 200}},
-      {"part": {"op": "extrude", "profile": "star", "height": 40, "twist": 120, "scale": 0.6}}), group="from 2D")
+      {"part": {"op": "extrude", "profile": "star", "height": 40, "twist": 120, "scale": 0.6}}),
+   notes="top and bottom give exact fillets or 45-degree chamfers along every top or bottom edge, holes included; "
+         "they cannot be combined with twist or scale. Round the vertical edges with a profile fillet.",
+   group="from 2D")
 op("solids", "revolve", "Turn a profile around the Z axis. Profile X is the radius (X >= 0), profile Y becomes Z.",
    {"profile": (REF, "Profile name: one polygon without holes, X >= 0")},
    {"angle": ({"type": "number", "exclusiveMinimum": 0, "maximum": 360}, "Sweep angle in degrees; less than 360 leaves flat ends", 360),
@@ -253,7 +282,9 @@ op("solids", "revolve", "Turn a profile around the Z axis. Profile X is the radi
 op("solids", "loft", "Skin a solid through profiles at increasing Z heights (one hole-free outline each).",
    {"sections": (array({"type": "object", "properties": {"profile": REF, "z": NUM}, "required": ["profile", "z"],
                         "additionalProperties": False}, 2), "[{profile, z}, ...] with strictly increasing z")},
-   {"samples": (INT, "Points per outline", 96)},
+   {"samples": (INT, "Points per outline", 96),
+    "smooth": (BOOL, "Curve the sides through the sections with a spline instead of straight lines (3+ sections)", False),
+    "steps": ({"type": "integer", "minimum": 1, "maximum": 1000}, "Layers between two sections when smooth", 8)},
    ex({"a": {"op": "rectangle", "size": [30, 30]}, "b": {"op": "circle", "radius": 8}},
       {"part": {"op": "loft", "sections": [{"profile": "a", "z": 0}, {"profile": "b", "z": 25}]}}),
    notes="Very different sections can self-intersect; nothing checks for that.", group="from 2D")
@@ -264,7 +295,9 @@ op("solids", "sweep", "Sweep a profile along a 3D path: a list of `points` or a 
    {"points": (array(V3, 2), "Path points", None), "curve": (CURVE3, "{x, y, z: functions of t, t: [a, b], samples}", None),
     "closed": (BOOL, "Path is a loop", False), "frame": ({"enum": ["rmf", "up"]}, "How the profile turns", "rmf"),
     "up": (V3, "Reference direction", [0, 0, 1]), "twist": (NUM, "Extra roll along the path in degrees", 0),
-    "scale": (POS, "Profile scale at the end (linear along the path)", 1)},
+    "scale": (POS, "Profile scale at the end (linear along the path)", 1),
+    "smooth": (BOOL, "Run the path along a smooth cubic spline through `points` instead of straight segments", False),
+    "samples": ({"type": "integer", "minimum": 2, "maximum": 1000000}, "Path points for a smooth path", "16 per point")},
    ex({"wire": {"op": "circle", "radius": 1.2, "segments": 24}},
       {"part": {"op": "sweep", "profile": "wire", "frame": "up",
                 "curve": {"x": "10*cos(t)", "y": "10*sin(t)", "z": "4*t/tau", "t": [0, "=5*tau"], "samples": 600}}}),
@@ -335,6 +368,35 @@ op("solids", "hull", "Convex hull of one or more solids.", {},
    ex(solids={"a": {"op": "sphere", "radius": 5}, "b": {"op": "cylinder", "radius": 2, "height": 4},
               "c": {"op": "transform", "input": "b", "translate": [20, 0, 0]}, "part": {"op": "hull", "inputs": ["a", "c"]}}),
    notes="Give input or inputs.", group="modify")
+op("solids", "fillet", "Round the edges of any solid with a ball of `radius`: convex edges lose material, concave "
+   "edges (where two parts meet) gain a smooth fillet, which blends a union into one organic piece.",
+   {"input": (REF, "Solid name"), "radius": (POS, "Fillet radius")},
+   {"edges": ({"enum": ["all", "convex", "concave"]}, "Which edges to round", "all"),
+    "segments": ({"type": "integer", "minimum": 4, "maximum": 128}, "Sides of the rounding ball", 24)},
+   ex(solids={"a": {"op": "box", "size": [30, 20, 8]}, "b": {"op": "cylinder", "radius": 5, "height": 20},
+              "c": {"op": "transform", "input": "b", "translate": [0, 0, 8]}, "u": {"op": "union", "inputs": ["a", "c"]},
+              "part": {"op": "fillet", "input": "u", "radius": 1.5, "segments": 8, "edges": "concave"}}),
+   notes="Works on any closed solid by morphology (Minkowski sums): the curve is made of facets, as fine as "
+         "`segments` sets. On a convex solid (a box, a cylinder, an extrusion of a convex outline) it rounds all "
+         "edges. On a non-convex solid (a union) use edges concave to fill the seams; rounding its convex edges is "
+         "rejected as too slow, so fillet the simple parts before the union.", group="modify")
+op("solids", "chamfer", "Bevel the edges of any solid. Edges parallel to an axis get a 45-degree bevel whose legs are "
+   "`distance`; other edges get a bevel of similar size.",
+   {"input": (REF, "Solid name"), "distance": (POS, "Bevel size")},
+   {"edges": ({"enum": ["all", "convex", "concave"]}, "Which edges to bevel", "all")},
+   ex(solids={"a": {"op": "box", "size": [30, 20, 10]}, "part": {"op": "chamfer", "input": "a", "distance": 2}}),
+   notes="Like fillet, but the tool is an octahedron, so corners where three edges meet are cut by a triangle.",
+   group="modify")
+op("solids", "smooth", "Turn a faceted solid into a smooth, organic one by subdividing it onto a curved surface. "
+   "Edges whose faces meet at more than `sharp_angle` stay creased; `smoothness` rounds those too.",
+   {"input": (REF, "Solid name")},
+   {"sharp_angle": ({"type": "number", "minimum": 0, "maximum": 180}, "Edges sharper than this (degrees) stay sharp", 60),
+    "smoothness": ({"type": "number", "minimum": 0, "maximum": 1}, "Rounding of the sharp edges, 0 (crisp) to 1 (all smooth)", 0),
+    "refine": ({"type": "integer", "minimum": 1, "maximum": 64}, "Split every edge into this many pieces", 4),
+    "edge_length": (POS, "Refine to about this edge length instead of refine", None)},
+   ex(solids={"a": {"op": "sphere", "radius": 10, "subdivisions": 1}, "part": {"op": "smooth", "input": "a", "refine": 4}}),
+   notes="A faceted sphere becomes a true sphere; a box keeps its edges because they are sharper than sharp_angle. "
+         "Triangles grow with refine squared.", group="modify")
 op("solids", "cut", "Slice with a plane and keep the side the normal points to; `cap` closes the cut face.",
    {"input": (REF, "Solid name"), "origin": (V3, "A point on the plane"), "normal": (V3, "Direction of the kept side")},
    {"cap": (BOOL, "Close the cut (needs a solid input)", True)},
@@ -407,7 +469,7 @@ RECIPE_FIELDS = {
     "density": "Material density in g/cm^3 (PLA 1.24, PETG 1.27, ABS 1.04, aluminium 2.70); reports add mass_g",
     "profiles": "Named 2D regions",
     "solids": "Named solids",
-    "exports": "[{solid, path, allow_open?}] files to write; .stl, .3mf, .obj, .ply, .off or .glb",
+    "exports": "[{solid, path, allow_open?}] files to write; .stl, .3mf, .step (or .stp; planar faces), .obj, .ply, .off or .glb",
     "checks": "[{solid, volume|area|mass|components|size_x|size_y|size_z: {min, max} or {approx, rel|abs}, "
               "is_volume, fits: [x, y, z]}] assertions; a failing check stops the build before anything is written",
 }

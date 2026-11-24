@@ -208,6 +208,12 @@ class Engine:
             geom = generate.curve_profile(n)
         elif op == "regular_polygon":
             geom = generate.regular_polygon(n)
+        elif op == "spline":
+            geom = generate.spline_profile(n)
+        elif op == "fillet":
+            geom = generate.round_corners(get(n["input"]), n)
+        elif op == "chamfer":
+            geom = generate.chamfer_corners(get(n["input"]), n)
         elif op == "text":
             geom = generate.text_profile(n, self.source(n["path"]) if "path" in n else None)
         elif op == "array":
@@ -293,6 +299,10 @@ class Engine:
             mesh = generate.cone(n)
         elif op == "torus":
             mesh = generate.torus(n)
+        elif op in ("fillet", "chamfer"):
+            mesh = generate.morph(get(n["input"]), n, op)
+        elif op == "smooth":
+            mesh = generate.smooth(get(n["input"]), n)
         elif op == "mirror":
             source = get(n["input"])
             mesh = source.copy()
@@ -301,7 +311,7 @@ class Engine:
                 mesh = boolean("union", [source, mesh])
         elif op == "loft":
             mesh = loft([self.get("profiles", s["profile"]) for s in n["sections"]],
-                        [s["z"] for s in n["sections"]], n.get("samples", 96))
+                        [s["z"] for s in n["sections"]], n.get("samples", 96), n.get("smooth", False), n.get("steps", 8))
         elif op == "revolve":
             mesh = generate.revolve(self.get("profiles", n["profile"]), n)
         elif op == "box":
