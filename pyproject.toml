@@ -32,6 +32,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# OpenCascade B-rep kernel: exact primitives, booleans, fillets and chamfers. Without it CDCAD uses meshes.
+brep = ["cadquery-ocp>=7.8,<9"]
 test = ["pytest>=8,<10"]
 
 [project.urls]

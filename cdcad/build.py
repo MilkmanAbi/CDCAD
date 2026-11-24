@@ -148,7 +148,12 @@ def build(recipe, base, out_dir=None, targets=None, force=False, dry_run=False, 
     for exp, path in zip(exports, paths):
         mesh = engine.get("solids", exp["solid"]).copy()
         mesh.apply_scale(UNITS[engine.unit])
-        data = export_bytes(mesh, path, exp.get("allow_open", False))
+        if path.suffix.lower() in (".step", ".stp") and engine.brep_ok("solids", exp["solid"]):
+            # An exact B-rep solid keeps its true curved faces in the STEP file.
+            from . import brep
+            data = brep.step_bytes(engine.shape("solids", exp["solid"]), UNITS[engine.unit], path.stem)
+        else:
+            data = export_bytes(mesh, path, exp.get("allow_open", False))
         pending.append((path, data))
         reports.append({"solid": exp["solid"], "path": str(path), "sha256": hashlib.sha256(data).hexdigest(),
                         **mesh_report(mesh, density)})

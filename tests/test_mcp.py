@@ -1,6 +1,8 @@
 """The MCP tool server, driven with a scripted JSON-RPC session."""
 import base64
 import json
+
+import pytest
 import subprocess
 import sys
 
@@ -48,7 +50,8 @@ def test_build_render_and_errors_as_tool_results(tmp_path):
     assert report["exports"][0]["is_volume"] and (tmp_path/"torus.stl").is_file()
     image, summary = replies[2]["result"]["content"]
     assert image["type"] == "image" and base64.b64decode(image["data"])[:4] == b"\x89PNG"
-    assert json.loads(summary["text"])["extents"] == [26.0, 26.0, 6.0]
+    # Exact B-rep torus, tessellated: the outer diameter is within the facet sag of 26.
+    assert json.loads(summary["text"])["extents"] == pytest.approx([26.0, 26.0, 6.0], rel=1e-3)
     assert replies[3]["result"]["isError"]
     assert json.loads(replies[3]["result"]["content"][0]["text"])["hint"] == "Did you mean 'torus'?"
     assert replies[4]["result"]["content"][0]["text"].startswith("# CDCAD")
