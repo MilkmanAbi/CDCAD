@@ -11,6 +11,7 @@ New:
 - `sweep` takes `smooth`, which runs the profile along a spline through the path points.
 - `smooth` solid: a smooth, subdivided surface (Manifold's smooth constructor). Edges sharper than `sharp_angle` stay creased; a faceted sphere becomes a sphere.
 - `REFERENCE.md` tables and `recipe.schema.json` list the new operations.
+- Hybrid B-rep kernel (optional, `pip install cdcad[brep]`, OpenCascade via cadquery-ocp): primitives, extrusions of plain profiles, booleans, uniform scale/rotate/translate, and all-edge fillets and chamfers are built as exact B-rep solids. Their STEP export keeps true curved faces, and fillets take milliseconds. Tessellation sets the mesh that checks, STL and renders use. Solids that need mesh-only operations, and concave/convex edge selection, stay on the mesh path, which also runs when the kernel is absent. `capabilities` reports `brep_kernel`.
 
 # 0.5.0
 

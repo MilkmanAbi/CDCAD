@@ -376,16 +376,19 @@ op("solids", "fillet", "Round the edges of any solid with a ball of `radius`: co
    ex(solids={"a": {"op": "box", "size": [30, 20, 8]}, "b": {"op": "cylinder", "radius": 5, "height": 20},
               "c": {"op": "transform", "input": "b", "translate": [0, 0, 8]}, "u": {"op": "union", "inputs": ["a", "c"]},
               "part": {"op": "fillet", "input": "u", "radius": 1.5, "segments": 8, "edges": "concave"}}),
-   notes="Works on any closed solid by morphology (Minkowski sums): the curve is made of facets, as fine as "
-         "`segments` sets. On a convex solid (a box, a cylinder, an extrusion of a convex outline) it rounds all "
-         "edges. On a non-convex solid (a union) use edges concave to fill the seams; rounding its convex edges is "
-         "rejected as too slow, so fillet the simple parts before the union.", group="modify")
+   notes="With the B-rep kernel (pip install cdcad[brep]) and edges all, a solid made of primitives, extrusions, "
+         "booleans, uniform scale/rotate/translate is filleted exactly, on its real edges, in milliseconds, and its "
+         "STEP export keeps true curved faces. OpenCascade can refuse a fillet where a face is too narrow for the "
+         "radius (its error suggests a smaller size). Otherwise the fillet is made by morphology on the mesh: any "
+         "closed solid, facets as fine as `segments`; a convex solid rounds all edges, and a non-convex one uses edges "
+         "concave, since its convex edges are too slow that way.", group="modify")
 op("solids", "chamfer", "Bevel the edges of any solid. Edges parallel to an axis get a 45-degree bevel whose legs are "
    "`distance`; other edges get a bevel of similar size.",
    {"input": (REF, "Solid name"), "distance": (POS, "Bevel size")},
    {"edges": ({"enum": ["all", "convex", "concave"]}, "Which edges to bevel", "all")},
    ex(solids={"a": {"op": "box", "size": [30, 20, 10]}, "part": {"op": "chamfer", "input": "a", "distance": 2}}),
-   notes="Like fillet, but the tool is an octahedron, so corners where three edges meet are cut by a triangle.",
+   notes="Exact with the B-rep kernel when edges is all and the solid is B-rep (see fillet); otherwise the mesh "
+         "method, whose tool is an octahedron, so corners where three edges meet are cut by a triangle.",
    group="modify")
 op("solids", "smooth", "Turn a faceted solid into a smooth, organic one by subdividing it onto a curved surface. "
    "Edges whose faces meet at more than `sharp_angle` stay creased; `smoothness` rounds those too.",

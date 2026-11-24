@@ -40,6 +40,11 @@ def parser():
     return application
 
 
+def _brep_available():
+    from .brep import available
+    return available()
+
+
 def capabilities(args):
     from .expr import FUNCTIONS
     from .render import VIEWS
@@ -50,7 +55,7 @@ def capabilities(args):
         "commands": list(args.command_choices), "project_commands": list(args.project_choices),
         "units": dict(UNITS), "export_formats": list(EXPORT_FORMATS),
         "views": ["grid", *VIEWS], "functions": list(FUNCTIONS),
-        "dependencies": dependency_versions(),
+        "dependencies": dependency_versions(), "brep_kernel": _brep_available(),
     }
 
 
