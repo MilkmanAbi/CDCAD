@@ -67,6 +67,72 @@ def regular_polygon(node):
     return polygonal(Polygon(np.column_stack([cx + radius*np.cos(angles), cy + radius*np.sin(angles)])))
 
 
+MITRE_LIMIT = 1000.0
+
+
+def round_corners(geom, node):
+    """Round the corners of a profile: convex corners by shrinking then growing it back
+    (an opening), concave ones by growing then shrinking (a closing). The radius is exact;
+    parts narrower than twice the radius vanish under an opening."""
+    radius, corners = node["radius"], node.get("corners", "all")
+    quad = node.get("segments", 16)
+    if corners in ("concave", "all"):
+        geom = geom.buffer(radius, join_style="mitre", mitre_limit=MITRE_LIMIT).buffer(
+            -radius, join_style="round", quad_segs=quad)
+    if corners in ("convex", "all"):
+        geom = geom.buffer(-radius, join_style="mitre", mitre_limit=MITRE_LIMIT).buffer(
+            radius, join_style="round", quad_segs=quad)
+    if geom.is_empty:
+        raise CADError(f"A fillet radius of {radius:g} removes the whole profile",
+                       hint="the radius must be less than half the narrowest part")
+    return geom
+
+
+def chamfer_corners(geom, node):
+    """Bevel the corners of a profile; at a right angle each leg of the bevel is `distance`."""
+    distance, corners = node["distance"], node.get("corners", "all")
+    if corners in ("concave", "all"):
+        geom = geom.buffer(distance, join_style="mitre", mitre_limit=MITRE_LIMIT).buffer(-distance, join_style="bevel")
+    if corners in ("convex", "all"):
+        geom = geom.buffer(-distance, join_style="mitre", mitre_limit=MITRE_LIMIT).buffer(distance, join_style="bevel")
+    if geom.is_empty:
+        raise CADError(f"A chamfer of {distance:g} removes the whole profile",
+                       hint="the distance must be less than half the narrowest part")
+    return geom
+
+
+def spline_points(points, closed, samples):
+    """Points on a cubic spline through ``points`` (chord-length parameter). A closed
+    spline is periodic: smooth where it joins itself."""
+    from scipy.interpolate import CubicSpline
+    pts = np.asarray(points, dtype=float)
+    keep = np.r_[True, np.linalg.norm(np.diff(pts, axis=0), axis=1) > 1e-12]
+    pts = pts[keep]
+    if closed and len(pts) > 1 and np.linalg.norm(pts[-1] - pts[0]) <= 1e-12:
+        pts = pts[:-1]
+    if len(pts) < (3 if closed else 2):
+        raise CADError(f"A {'closed' if closed else 'open'} spline needs at least {3 if closed else 2} distinct points")
+    if closed:
+        pts = np.vstack([pts, pts[:1]])
+    t = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))]
+    u = np.linspace(0, t[-1], samples, endpoint=not closed)
+    if len(pts) == 2:
+        return pts[0] + (pts[1] - pts[0])*(u/t[-1])[:, None]
+    return CubicSpline(t, pts, axis=0, bc_type="periodic" if closed else "not-a-knot")(u)
+
+
+def spline_profile(node):
+    closed = node.get("closed", "width" not in node)
+    xy = spline_points(node["points"], closed, node.get("samples", 256))
+    if "width" in node:
+        from shapely.geometry import LineString
+        line = LineString(np.vstack([xy, xy[:1]]) if closed else xy)
+        return line.buffer(node["width"]/2, cap_style=node.get("cap", "round"), join_style="round", quad_segs=16)
+    if not closed:
+        raise CADError("An open spline has no inside to fill", hint="set closed true, or give width to draw it as a line")
+    return _region(xy)
+
+
 def profile_array(source, node):
     cx, cy = node.get("center", [0, 0])
     dx, dy = node.get("step", [0, 0])
@@ -189,10 +255,12 @@ def cap_faces(rings):
     return faces
 
 
-def stack_solid(rings, layers, closed=False):
+def stack_solid(rings, layers, closed=False, cap_rings=None):
     """Solid through ``layers``: a list of (M, 3) arrays, each the polygon's ring points
     (rings concatenated, M points) placed in 3D. Consecutive layers are joined by side
     walls; an open stack gets end caps, a closed one joins the last layer to the first.
+    The caps are triangulated from ``rings`` unless ``cap_rings`` gives the 2D rings of
+    the bottom and top layers (for stacks whose outline changes shape, not just size).
     Points that coincide (on a revolve axis, at a cone tip) are merged."""
     sizes = [len(r) for r in rings]
     total = sum(sizes)
@@ -211,9 +279,9 @@ def stack_solid(rings, layers, closed=False):
             faces.append(np.column_stack([a+i, b+j, b+i]))
         start += size
     if not closed:
-        cap = cap_faces(rings)
-        faces.append(cap[:, ::-1])
-        faces.append(cap + (count-1)*total)
+        bottom, top = cap_rings or (rings, rings)
+        faces.append(cap_faces(bottom)[:, ::-1])
+        faces.append(cap_faces(top) + (count-1)*total)
     mesh = trimesh.Trimesh(vertices=vertices, faces=np.concatenate(faces), process=True)
     mesh.update_faces(mesh.nondegenerate_faces())
     mesh.update_faces(mesh.unique_faces())
@@ -230,12 +298,105 @@ def _checked(mesh, what):
     return mesh
 
 
+def _edge_layers(spec, segments, where):
+    """(rise, inset) pairs for a rounded or bevelled edge, from the side wall (rise 0,
+    inset 0) to the flat face (rise = inset = size)."""
+    if not spec:
+        return []
+    if ("fillet" in spec) == ("chamfer" in spec):
+        raise CADError(f"extrude {where} needs exactly one of fillet or chamfer")
+    if "chamfer" in spec:
+        size = spec["chamfer"]
+        return [(0.0, 0.0), (size, size)]
+    size = spec["fillet"]
+    steps = spec.get("segments", segments)
+    angles = np.linspace(0, math.pi/2, steps+1)
+    return [(size*math.sin(a), size*(1 - math.cos(a))) for a in angles]
+
+
+def _signed_area2(ring):
+    xy = np.asarray(ring, dtype=float)[:, :2]
+    return float(np.sum(xy[:, 0]*np.roll(xy[:, 1], -1) - np.roll(xy[:, 0], -1)*xy[:, 1]))
+
+
+def _perimeter_ring(target, count, start, like):
+    """``count`` points spread evenly by length around ``target``'s exterior, beginning at
+    the vertex nearest ``start`` and running in the same direction as ``like`` (the ring it
+    replaces), so each layer starts where the one below it does and the walls face outward."""
+    from shapely.geometry import LineString
+    coords = np.asarray(target.coords)[:-1, :2]
+    if np.sign(_signed_area2(coords)) != np.sign(_signed_area2(like)):
+        coords = coords[::-1]
+    first = int(np.argmin(np.linalg.norm(coords - start, axis=1)))
+    coords = np.roll(coords, -first, axis=0)
+    line = LineString(np.vstack([coords, coords[:1]]))
+    distances = np.arange(count)/count*line.length
+    return np.array([[q.x, q.y] for q in (line.interpolate(d) for d in distances)])
+
+
+def _matched_hole(shrunk, ring):
+    """The hole of ``shrunk`` that belongs to the original hole ``ring`` (nearest centroid)."""
+    from shapely.geometry import Point
+    centre = Point(np.asarray(ring).mean(axis=0))
+    return min(shrunk.interiors, key=lambda hole: Polygon(hole).centroid.distance(centre))
+
+
+def edged_extrude(geom, node):
+    """Extrusion whose top and/or bottom edges are rounded (fillet) or bevelled (chamfer).
+
+    Each layer is the profile shrunk by the edge's inset at that height. Every layer keeps
+    the same number of points, spread evenly around the shrunk outline and starting at the
+    matching corner, so consecutive layers can be joined by side walls."""
+    height, z0 = node["height"], node.get("z", 0)
+    segments = 8
+    top = _edge_layers(node.get("top"), segments, "top")
+    bottom = _edge_layers(node.get("bottom"), segments, "bottom")
+    rise = (top[-1][0] if top else 0) + (bottom[-1][0] if bottom else 0)
+    if rise > height*(1 + 1e-9):
+        raise CADError(f"extrude edges ({rise:g} in total) are taller than the extrusion ({height:g})",
+                       hint="make the top and bottom fillet/chamfer sizes add up to at most the height")
+    plan = [(z0 + bottom[-1][0] - r, d) for r, d in reversed(bottom)] if bottom else [(z0, 0.0)]
+    plan += [(z0 + height - top[-1][0] + r, d) for r, d in top] if top else [(z0 + height, 0.0)]
+    deduped = [plan[0]]
+    for z, d in plan[1:]:
+        if abs(z - deduped[-1][0]) > 1e-9 or abs(d - deduped[-1][1]) > 1e-9:
+            deduped.append((z, d))
+    plan = deduped
+    largest = max(d for _, d in plan)
+    parts = []
+    for poly in polygons(geom):
+        dense = poly.segmentize(max(largest, 1e-6))
+        rings = polygon_rings(dense)
+        layers, flat_layers = [], []
+        for z, inset in plan:
+            if inset <= 0:
+                shrunk_rings = rings
+            else:
+                shrunk = dense.buffer(-inset, join_style="round", quad_segs=8)
+                if not isinstance(shrunk, Polygon) or shrunk.is_empty or len(shrunk.interiors) != len(rings)-1:
+                    raise CADError(f"A {inset:g} edge inset splits or closes up this profile",
+                                   hint="use a smaller fillet/chamfer than half the narrowest part of the profile")
+                shrunk_rings = []
+                for k, ring in enumerate(rings):
+                    target = shrunk.exterior if k == 0 else _matched_hole(shrunk, ring)
+                    shrunk_rings.append(_perimeter_ring(target, len(ring), ring[0], ring))
+            flat_layers.append(shrunk_rings)
+            layers.append(np.column_stack([np.vstack(shrunk_rings), np.full(sum(map(len, rings)), z)]))
+        mesh = stack_solid(rings, layers, cap_rings=(flat_layers[0], flat_layers[-1]))
+        parts.append(_checked(mesh, "Extrusion with edge fillet/chamfer"))
+    return trimesh.util.concatenate(parts)
+
+
 def extrude(geom, node):
     height = node["height"]
     z0 = node.get("z", 0)
     twist = node.get("twist", 0)
     scale = node.get("scale", 1)
     sx, sy = (scale, scale) if isinstance(scale, (int, float)) else scale
+    if node.get("top") or node.get("bottom"):
+        if twist != 0 or sx != 1 or sy != 1:
+            raise CADError("extrude top/bottom edges cannot be combined with twist or scale")
+        return edged_extrude(geom, node)
     if twist == 0 and sx == 1 and sy == 1:
         meshes = [trimesh.creation.extrude_polygon(p, height, engine="earcut") for p in polygons(geom)]
         mesh = trimesh.util.concatenate(meshes)
@@ -293,7 +454,10 @@ def path_points(node):
     if ("points" in node) == ("curve" in node):
         raise CADError("sweep needs exactly one of points or curve")
     closed = node.get("closed", False)
-    if "points" in node:
+    if "points" in node and node.get("smooth"):
+        count = len(node["points"])
+        points = spline_points(node["points"], closed, node.get("samples", max(64, 16*count)))
+    elif "points" in node:
         points = np.asarray(node["points"], dtype=float)
     else:
         curve = node["curve"]
@@ -488,3 +652,90 @@ def mirror_matrix(normal, origin):
     matrix[:3, :3] -= 2*np.outer(n, n)
     matrix[:3, 3] = 2*np.dot(np.asarray(origin, dtype=float), n)*n
     return matrix
+
+
+# ---- edge rounding and smoothing of solids ----------------------------------------------
+
+MAX_SMOOTH_FACES = 4_000_000
+
+
+def _morph_tool(node, kind):
+    import manifold3d
+    if kind == "fillet":
+        return manifold3d.Manifold.sphere(node["radius"], node.get("segments", 24))
+    d = node["distance"]
+    corners = np.array([[d, 0, 0], [-d, 0, 0], [0, d, 0], [0, -d, 0], [0, 0, d], [0, 0, -d]], dtype=float)
+    return manifold3d.Manifold.hull_points(corners)
+
+
+def morph(mesh, node, kind):
+    """Round (fillet) or bevel (chamfer) the edges of any solid by morphology: an opening
+    (shrink by the tool, grow back) takes material off convex edges, a closing (grow, then
+    shrink) fills concave edges. The tool is a sphere for a fillet and an octahedron for a
+    chamfer, which bevels axis-aligned edges at 45 degrees with legs of `distance`."""
+    from .mesh import from_manifold, to_manifold
+    body, tool = to_manifold(mesh), _morph_tool(node, kind)
+    edges = node.get("edges", "all")
+    convex = body.hull().volume() - body.volume() <= 1e-9*max(body.volume(), 1.0)
+    if edges in ("concave", "all") and not convex:
+        body = body.minkowski_sum(tool).minkowski_difference(tool)
+    if edges in ("convex", "all") and not convex:
+        raise CADError(f"{kind} of convex edges on a non-convex solid is too slow with this method",
+                       hint=f"set edges to concave, or {kind} the simple parts before combining them "
+                            "(a union of rounded boxes and cylinders keeps its outer edges rounded)")
+    if edges in ("convex", "all") and convex:
+        body = body.minkowski_difference(tool)
+        if body.is_empty():
+            size = node.get("radius", node.get("distance"))
+            raise CADError(f"A {kind} of {size:g} removes the whole solid",
+                           hint="use a size below half the thinnest part")
+        body = body.minkowski_sum(tool)
+    return from_manifold(body, kind)
+
+
+def _sharp_halfedges(mesh, angle):
+    """Halfedge indices (3 * face + edge slot) of every edge whose faces meet at more than
+    ``angle`` degrees: Manifold keeps those edges crisp."""
+    faces = np.asarray(mesh.faces)
+    sharp = []
+    edges = mesh.face_adjacency_edges
+    for (f1, f2), edge, turn in zip(mesh.face_adjacency, edges, np.degrees(mesh.face_adjacency_angles)):
+        if turn <= angle:
+            continue
+        for f in (f1, f2):
+            for k in range(3):
+                if {faces[f][k], faces[f][(k+1) % 3]} == set(edge):
+                    sharp.append(3*int(f) + k)
+    return sharp
+
+
+def smooth(mesh, node):
+    """Subdivide a solid onto a smooth surface (Manifold's smooth constructor, then refine).
+
+    Edges whose faces meet at more than `sharp_angle` degrees stay creased; `smoothness`
+    (0 to 1) sets how far those creases are rounded, 0 keeping them crisp. Everything else
+    becomes a smooth surface through the original vertices, so a faceted sphere turns into
+    a sphere and a box keeps its edges."""
+    import manifold3d
+    from .mesh import from_manifold, valid_mesh
+    valid_mesh(mesh)
+    sharp = _sharp_halfedges(mesh, node.get("sharp_angle", 60))
+    weights = [float(node.get("smoothness", 0))]*len(sharp)
+    source = manifold3d.Mesh64(vert_properties=np.ascontiguousarray(mesh.vertices, dtype=np.float64),
+                               tri_verts=np.ascontiguousarray(mesh.faces, dtype=np.uint64))
+    body = manifold3d.Manifold.smooth(source, sharp, weights)
+    if body.status() != manifold3d.Error.NoError:
+        raise CADError(f"Manifold could not smooth this solid: {body.status()}")
+    if "edge_length" in node:
+        estimate = float(mesh.area)/(node["edge_length"]**2*0.43)
+        if estimate > MAX_SMOOTH_FACES:
+            raise CADError(f"edge_length {node['edge_length']:g} would make about {estimate:,.0f} triangles",
+                           hint="use a longer edge_length")
+        body = body.refine_to_length(node["edge_length"])
+    else:
+        n = node.get("refine", 4)
+        if len(mesh.faces)*n*n > MAX_SMOOTH_FACES:
+            raise CADError(f"refine {n} would make {len(mesh.faces)*n*n:,} triangles", hint="use a smaller refine")
+        if n > 1:
+            body = body.refine(n)
+    return from_manifold(body, "smoothed solid")

@@ -19,7 +19,7 @@ from ._profiles import (
     arch_opening, arch_profile, corner_radius, frame_profile, panel_cutouts, polygonal,
     read_dxf, read_svg, slot_profile, svg_path_geometry,
 )
-from . import generate
+from . import brep, generate
 from .graph import validate_graph
 from .mesh import (
     boolean, bounds_anchor, clean_mesh, cut_mesh, heightfield, load_mesh,
@@ -47,6 +47,7 @@ class Engine:
         self.unit = recipe.get("units", "mm")
         self.cache_dir = Path(cache_dir).resolve() if cache_dir else None
         self.keys, self.file_hashes = {}, {}
+        self.shapes, self.brep_flags = {}, {}
         validate_graph(recipe)
 
     @property
@@ -85,7 +86,13 @@ class Engine:
                     except Exception:
                         value = None  # Damaged cache entries are recomputed, never unpickled.
             if value is None:
-                value = self.profile(node) if kind == "profiles" else self.solid(node)
+                if kind == "solids" and self.brep_ok(kind, name):
+                    shape = self.shape(kind, name)
+                    # A segments count sets the facet angle, as in the mesh path (full turn / segments).
+                    angle = 2*math.pi/node["segments"] if node.get("segments") else 0.1
+                    value = brep.tessellate(shape, brep.extent(shape), angle)
+                else:
+                    value = self.profile(node) if kind == "profiles" else self.solid(node)
                 if cache_file:
                     if kind == "profiles":
                         data = value.wkb
@@ -102,6 +109,53 @@ class Engine:
         self.trace.append({"kind": kind, "name": name, "op": node["op"],
                            "cache_hit": hit, "seconds": round(time.perf_counter()-start, 6)})
         return value
+
+    def brep_ok(self, kind, name):
+        """True when this solid can be built exactly with OpenCascade: its operation and every
+        input are B-rep operations. Other solids stay on the triangle-mesh path."""
+        if kind != "solids":
+            return False
+        key = name
+        if key in self.brep_flags:
+            return self.brep_flags[key]
+        self.brep_flags[key] = False  # guards against cycles while checking inputs
+        node = self.recipe["solids"][name]
+        op = node["op"]
+        if not brep.available() or op not in brep.BREP_OPS:
+            ok = False
+        elif op in brep.BREP_PRIMITIVES:
+            ok = True
+        elif op == "extrude":
+            ok = not node.get("twist") and node.get("scale", 1) == 1 and not node.get("top")                 and not node.get("bottom")
+        elif op in ("union", "difference", "intersection"):
+            ok = all(self.brep_ok("solids", ref) for ref in node["inputs"])
+        elif op == "transform":
+            scale = node.get("scale", [1, 1, 1])
+            ok = "matrix" not in node and scale[0] == scale[1] == scale[2]                 and self.brep_ok("solids", node["input"])
+        elif op in ("fillet", "chamfer"):
+            ok = node.get("edges", "all") == "all" and self.brep_ok("solids", node["input"])
+        else:
+            ok = False
+        self.brep_flags[key] = ok
+        return ok
+
+    def shape(self, kind, name):
+        """The OpenCascade shape of a B-rep solid (see brep_ok), built from its inputs."""
+        if (kind, name) in self.shapes:
+            return self.shapes[(kind, name)]
+        node = dict(self.recipe[kind][name])
+        if node["op"] == "extrude":
+            node["_profile"] = self.get("profiles", node["profile"])
+            children = []
+        elif node["op"] in ("union", "difference", "intersection"):
+            children = [self.shape(kind, ref) for ref in node["inputs"]]
+        elif node["op"] in brep.BREP_PRIMITIVES:
+            children = []
+        else:
+            children = [self.shape(kind, node["input"])]
+        result = brep.build(node, children)
+        self.shapes[(kind, name)] = result
+        return result
 
     def node_key(self, kind, name):
         key = (kind, name)
@@ -208,6 +262,12 @@ class Engine:
             geom = generate.curve_profile(n)
         elif op == "regular_polygon":
             geom = generate.regular_polygon(n)
+        elif op == "spline":
+            geom = generate.spline_profile(n)
+        elif op == "fillet":
+            geom = generate.round_corners(get(n["input"]), n)
+        elif op == "chamfer":
+            geom = generate.chamfer_corners(get(n["input"]), n)
         elif op == "text":
             geom = generate.text_profile(n, self.source(n["path"]) if "path" in n else None)
         elif op == "array":
@@ -293,6 +353,10 @@ class Engine:
             mesh = generate.cone(n)
         elif op == "torus":
             mesh = generate.torus(n)
+        elif op in ("fillet", "chamfer"):
+            mesh = generate.morph(get(n["input"]), n, op)
+        elif op == "smooth":
+            mesh = generate.smooth(get(n["input"]), n)
         elif op == "mirror":
             source = get(n["input"])
             mesh = source.copy()
@@ -301,7 +365,7 @@ class Engine:
                 mesh = boolean("union", [source, mesh])
         elif op == "loft":
             mesh = loft([self.get("profiles", s["profile"]) for s in n["sections"]],
-                        [s["z"] for s in n["sections"]], n.get("samples", 96))
+                        [s["z"] for s in n["sections"]], n.get("samples", 96), n.get("smooth", False), n.get("steps", 8))
         elif op == "revolve":
             mesh = generate.revolve(self.get("profiles", n["profile"]), n)
         elif op == "box":

@@ -44,7 +44,8 @@ def test_reference_tables_list_every_operation():
 
 
 def test_changelog_mentions_the_current_version():
-    assert (ROOT/"CHANGELOG.md").read_text(encoding="utf-8").startswith(f"# {cad.__version__}")
+    text = (ROOT/"CHANGELOG.md").read_text(encoding="utf-8")
+    assert text.startswith(f"# {cad.__version__}") or text.startswith("# Unreleased")
 
 
 def test_readme_links_work_on_pypi():

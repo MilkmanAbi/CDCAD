@@ -159,6 +159,9 @@ Run `cdcad describe` for the list and `cdcad describe OP` for one operation's pr
 | `arch_opening` | `span` | `rise` (span/2), `leg` (0), `segments` (64) |
 | `arch` | `span`, `thickness` | `rise` (span/2), `leg` (0), `segments` (64) |
 | `frame` | `size`, `border` | — |
+| `spline` | `points` | `closed`, `width`, `cap` (round), `samples` (256) |
+| `fillet` | `input`, `radius` | `corners` (all), `segments` (16) |
+| `chamfer` | `input`, `distance` | `corners` (all) |
 
 | 3D operation (solids) | Required | Optional (default) |
 |---|---|---|
@@ -195,6 +198,9 @@ Run `cdcad describe` for the list and `cdcad describe OP` for one operation's pr
 | `frame` | `size`, `border`, `depth` | `plane` (xz), `center` ([0, 0, 0]) |
 | `arch` | `span`, `thickness`, `depth` | `rise` (span/2), `leg` (0), `segments` (64), `origin` ([0, 0, 0]) |
 | `beam` | `start`, `end`, `size` | `roll` (0) |
+| `fillet` | `input`, `radius` | `edges` (all), `segments` (24) |
+| `chamfer` | `input`, `distance` | `edges` (all) |
+| `smooth` | `input` | `sharp_angle` (60), `smoothness` (0), `refine` (4), `edge_length` |
 
 Each node also requires `op`. References point to nodes in the same namespace, except a solid's `profile` and loft sections which reference `profiles`. Forward references are allowed; cycles are rejected. Difference subtracts all later inputs from the first. Intersection keeps the overlap of all inputs. `hull` takes `input` or `inputs`.
 

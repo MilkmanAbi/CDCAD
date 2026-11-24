@@ -9,7 +9,7 @@ import sys
 
 VERSION = "0.5.0"
 UNITS = {"mm": 1.0, "cm": 10.0, "m": 1000.0, "in": 25.4}
-EXPORT_FORMATS = ("stl", "3mf", "ply", "obj", "glb", "off")
+EXPORT_FORMATS = ("stl", "3mf", "step", "stp", "ply", "obj", "glb", "off")
 GEOMETRY_DEPENDENCIES = (
     "numpy", "trimesh", "shapely", "manifold3d", "mapbox-earcut",
     "svgelements", "ezdxf", "Pillow", "fast-simplification", "scipy", "networkx", "fonttools",

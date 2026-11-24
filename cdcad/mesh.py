@@ -63,6 +63,28 @@ def cut_mesh(mesh, origin, normal, cap=True):
     return valid_mesh(trimesh.Trimesh(vertices=result.vert_properties, faces=result.tri_verts, process=False))
 
 
+def to_manifold(mesh):
+    """A manifold3d.Manifold of a closed trimesh mesh, in double precision."""
+    import manifold3d
+    valid_mesh(mesh)
+    result = manifold3d.Manifold(manifold3d.Mesh64(
+        vert_properties=np.ascontiguousarray(mesh.vertices, dtype=np.float64),
+        tri_verts=np.ascontiguousarray(mesh.faces, dtype=np.uint64)))
+    if result.status() != manifold3d.Error.NoError:
+        raise CADError(f"Manifold rejected the mesh: {result.status()}")
+    return result
+
+
+def from_manifold(manifold, what="result"):
+    result = manifold.to_mesh64()
+    if len(result.tri_verts) == 0:
+        raise CADError(f"The {what} is empty")
+    # Manifold's output is already a closed, consistently wound mesh. Trimesh's own vertex
+    # merge (process=True) can split it again, so keep its arrays as they are.
+    return trimesh.Trimesh(vertices=np.asarray(result.vert_properties)[:, :3], faces=np.asarray(result.tri_verts),
+                           process=False)
+
+
 def planar_solid(geom, depth, plane="xy", center=(0, 0, 0)):
     mesh = trimesh.util.concatenate([trimesh.creation.extrude_polygon(p, depth, engine="earcut") for p in polygons(geom)])
     mesh.apply_translation([0, 0, -depth/2])
@@ -106,36 +128,45 @@ def transform_mesh(mesh, node):
     return result
 
 
-def loft(section_geoms, zs, samples):
-    """Resample one outer ring per section; sew sides and triangulated end caps."""
+def loft(section_geoms, zs, samples, smooth=False, steps=8):
+    """Skin a solid through one outer ring per section.
+
+    Every outline is resampled to ``samples`` points by arc length and turned so its start
+    lines up with the section below, to avoid a twisted seam. Straight (ruled) sides join
+    consecutive sections; with ``smooth`` each point instead follows a cubic spline through
+    all sections, with ``steps`` layers between two sections, so the sides curve smoothly
+    from one section to the next.
+    """
+    from shapely import line_interpolate_point
     from shapely.geometry.polygon import orient
+    from .generate import stack_solid
     if any(b <= a for a, b in zip(zs, zs[1:])):
         raise CADError("Loft section Z coordinates must be strictly increasing")
     rings = []
+    fractions = np.arange(samples)/samples
     for geom in section_geoms:
         if not isinstance(geom, Polygon) or len(geom.interiors):
             raise CADError("Loft requires one hole-free polygon per section; subtract holes afterward")
         boundary = orient(geom, sign=1).exterior
-        ring = np.array([[boundary.interpolate(i / samples, normalized=True).x,
-                          boundary.interpolate(i / samples, normalized=True).y] for i in range(samples)])
-        # Align ring starts to avoid a twisted seam from different source vertex starts.
+        ring = np.array([[q.x, q.y] for q in line_interpolate_point(boundary, fractions, normalized=True)])
         if rings:
             costs = [np.sum((np.roll(ring, -k, axis=0) - rings[-1])**2) for k in range(samples)]
             ring = np.roll(ring, -int(np.argmin(costs)), axis=0)
         rings.append(ring)
-    vertices = np.vstack([np.column_stack([ring, np.full(samples, z)]) for ring, z in zip(rings, zs)])
-    faces = []
-    for level in range(len(rings)-1):
-        a, b = level*samples, (level+1)*samples
-        for i in range(samples):
-            j = (i+1) % samples
-            faces.extend([[a+i, a+j, b+j], [a+i, b+j, b+i]])
-    for level, reverse in [(0, True), (len(rings)-1, False)]:
-        v, f = trimesh.creation.triangulate_polygon(Polygon(rings[level]), engine="earcut")
-        lookup = {tuple(p): i for i, p in enumerate(rings[level])}
-        mapped = np.array([lookup[tuple(p)] + level*samples for p in v])[f]
-        faces.extend(mapped[:, ::-1] if reverse else mapped)
-    return valid_mesh(trimesh.Trimesh(vertices=vertices, faces=faces, process=True))
+    heights = np.asarray(zs, dtype=float)
+    if smooth and len(rings) > 2:
+        from scipy.interpolate import CubicSpline
+        dense = np.unique(np.concatenate([np.linspace(a, b, steps+1) for a, b in zip(heights, heights[1:])]))
+        spline = CubicSpline(heights, np.stack(rings), axis=0, bc_type="natural")
+        layer_rings, heights = list(spline(dense)), dense
+    else:
+        layer_rings = rings
+    layers = [np.column_stack([ring, np.full(samples, z)]) for ring, z in zip(layer_rings, heights)]
+    mesh = stack_solid([layer_rings[0]], layers, cap_rings=([layer_rings[0]], [layer_rings[-1]]))
+    if not mesh.is_volume:
+        raise CADError("Loft did not produce a closed solid; the sections are probably too different and the "
+                       "sides pass through each other", hint="add intermediate sections or raise samples")
+    return valid_mesh(mesh)
 
 
 def image_values(file, limit):
@@ -401,6 +432,9 @@ def export_bytes(mesh, path, allow_open=False):
         raise CADError("Export extension must be one of " + ", ".join("." + f for f in EXPORT_FORMATS))
     if suffix == ".3mf":
         data = export_3mf(mesh)
+    elif suffix in (".step", ".stp"):
+        from .step import export_step
+        data = export_step(mesh, Path(path).stem or "part")
     else:
         data = mesh.export(file_type=suffix[1:])
         data = data.encode() if isinstance(data, str) else data
